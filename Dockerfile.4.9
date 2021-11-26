@@ -1,0 +1,18 @@
+# -*- mode: dockerfile -*-
+
+#
+# This is the HAProxy router for OpenShift Origin.
+#
+# The standard name for this image is openshift/origin-haproxy-router
+#
+FROM quay.io/openshift/origin-haproxy-router:4.9
+# Run as USER 0 required for setcap
+USER 0
+COPY ./haproxy /usr/sbin/haproxy
+RUN setcap 'cap_net_bind_service=ep' /usr/sbin/haproxy
+USER 1001
+EXPOSE 80 443
+WORKDIR /var/lib/haproxy/conf
+ENV TEMPLATE_FILE=/var/lib/haproxy/conf/haproxy-config.template \
+    RELOAD_SCRIPT=/var/lib/haproxy/reload-haproxy
+ENTRYPOINT ["/usr/bin/openshift-router"]
