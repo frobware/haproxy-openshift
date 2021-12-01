@@ -105,6 +105,7 @@ For example:
 If you already have a pre-built `haproxy` binary (e.g., brew build /
 RPM file) then you can inject it directly:
 
+    $ cp /path/to/pre-built/haproxy .
 	$ TAGNAME=ocp-4.10-haproxy-v2.2.19 REGISTRY_USERNAME=amcdermo IMAGENAME=openshift-router-perfscale \
 		./build-image.sh \
 			--build-container haproxy-builder-ubi8 \
