@@ -6,6 +6,8 @@ openshift-router image.
 
 # Install
 
+### CLone this repo
+
 	$ git clone https://github.com/frobware/haproxy-openshift
 	$ cd haproxy-openshift
 
@@ -42,7 +44,6 @@ delete the containers or images.
 	$ git clone http://git.haproxy.org/git/haproxy-1.8.git/
 	$ cd haproxy-1.8
 	$ ../haproxy-openshift/build-image.sh --build-container haproxy-builder-ubi7 --build-script ../haproxy-openshift/build-haproxy-1.8.sh -f ../haproxy-openshift/Dockerfile.3.11 --push-image --dry-run
-	rm -f haproxy
 	toolbox run --container haproxy-builder-ubi7 ../haproxy-openshift/build-haproxy-1.8.sh
 	podman build -t amcdermo/openshift-router:ocp-3.11-haproxy-v1.8.28 -f ../haproxy-openshift/Dockerfile.3.11 .
 	podman tag amcdermo/openshift-router:ocp-3.11-haproxy-v1.8.28 quay.io/amcdermo/openshift-router:ocp-3.11-haproxy-v1.8.28
@@ -64,8 +65,7 @@ update the openshift deployment to refer to this new image spec.
 
 	$ git clone http://git.haproxy.org/git/haproxy-2.2.git/
 	$ cd haproxy-2.2
-	$ ../haproxy-openshift/Dockerfile.4.8 --push-image --dry-run
-	rm -f haproxy
+	$ ../haproxy-openshift/build-image.sh --build-container haproxy-builder-ubi8 --build-script ../haproxy-openshift/build-haproxy-2.2.sh -f ../haproxy-openshift/Dockerfile.4.8 --push-image --dry-run
 	toolbox run --container haproxy-builder-ubi8 ../haproxy-openshift/build-haproxy-2.2.sh
 	podman build -t amcdermo/openshift-router:ocp-4.8-haproxy-v2.2.17 -f ../haproxy-openshift/Dockerfile.4.8 .
 	podman tag amcdermo/openshift-router:ocp-4.8-haproxy-v2.2.17 quay.io/amcdermo/openshift-router:ocp-4.8-haproxy-v2.2.17
@@ -75,7 +75,6 @@ update the openshift deployment to refer to this new image spec.
 	$ git clone http://git.haproxy.org/git/haproxy-2.4.git/
 	$ cd haproxy-2.4
 	$ ../haproxy-openshift/build-image.sh --build-container haproxy-builder-ubi8 --build-script ../haproxy-openshift/build-haproxy-2.4.sh -f ../haproxy-openshift/Dockerfile.4.10 --push-image --dry-run
-	rm -f haproxy
 	toolbox run --container haproxy-builder-ubi8 ../haproxy-openshift/build-haproxy-2.4.sh
 	podman build -t amcdermo/openshift-router:ocp-4.10-haproxy-v2.4.9 -f ../haproxy-openshift/Dockerfile.4.10 .
 	podman tag amcdermo/openshift-router:ocp-4.10-haproxy-v2.4.9 quay.io/amcdermo/openshift-router:ocp-4.10-haproxy-v2.4.9
@@ -96,8 +95,23 @@ For example:
 		--containerfile ../haproxy-openshift/Dockerfile.4.10 \
 		--push-image \
 		--dry-run
-	rm -f haproxy
 	toolbox run --container haproxy-builder-ubi8 ../haproxy-openshift/build-haproxy-2.4.sh
 	podman build -t frobware/openshift-router-perfscale:ocp-4.10-haproxy-v2.4.9 -f ../haproxy-openshift/Dockerfile.4.10 .
 	podman tag frobware/openshift-router-perfscale:ocp-4.10-haproxy-v2.4.9 docker.io/frobware/openshift-router-perfscale:ocp-4.10-haproxy-v2.4.9
 	podman push docker.io/frobware/openshift-router-perfscale:ocp-4.10-haproxy-v2.4.9
+
+## Injecting a pre-built binary
+
+	If you already have a pre-built `haproxy` binary (e.g., brew build / RPM file) then you can inject it directly:
+
+	$ TAGNAME=ocp-4.10-haproxy-v2.2.19 REGISTRY_USERNAME=amcdermo IMAGENAME=openshift-router-perfscale \
+		./build-image.sh \
+			--build-container haproxy-builder-ubi8 \
+			--build-script /bin/true \
+			--containerfile Dockerfile.4.10 \
+			--push-image \
+			--dry-run
+	toolbox run --container haproxy-builder-ubi8 /bin/true
+	podman build -t amcdermo/openshift-router-perfscale:ocp-4.10-haproxy-v2.2.19 -f Dockerfile.4.10 .
+	podman tag amcdermo/openshift-router-perfscale:ocp-4.10-haproxy-v2.2.19 quay.io/amcdermo/openshift-router-perfscale:ocp-4.10-haproxy-v2.2.19
+	podman push quay.io/amcdermo/openshift-router-perfscale:ocp-4.10-haproxy-v2.2.19

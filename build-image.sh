@@ -101,7 +101,6 @@ fi
 # reset positional arguments
 eval set -- "$PARAMS"
 
-$dry_run rm -f haproxy
 $dry_run toolbox run --container "${build_container}" "${build_script}"
 $dry_run podman build -t "${REGISTRY_USERNAME}/${IMAGENAME}:${TAGNAME}" -f "$containerfile" .
 
