@@ -5,6 +5,7 @@ set -o pipefail
 set -o errexit
 
 make -f Makefile -j $(nproc) \
+     V=1 \
      CPU="generic" \
      TARGET="linux-glibc" \
      USE_REGPARM=1 \
@@ -14,4 +15,4 @@ make -f Makefile -j $(nproc) \
      USE_CRYPT_H=1 \
      USE_LINUX_TPROXY=1 \
      USE_GETADDRINFO=1 \
-     "$@"
+     DEBUG="-DDEBUG_FULL" "$@"
