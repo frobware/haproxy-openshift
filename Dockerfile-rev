@@ -8,7 +8,7 @@
 FROM quay.io/openshift/origin-haproxy-router:4.8 as openshift-router
 USER 0
 
-FROM localhost/haproxy-builder-bz2044682
+FROM localhost/haproxy-builder-centos-bz2044682
 # Run as USER 0 required for setcap
 USER 0
 RUN  mkdir -p /var/lib/haproxy/router/{certs,cacerts,whitelists} && \
@@ -16,32 +16,15 @@ RUN  mkdir -p /var/lib/haproxy/router/{certs,cacerts,whitelists} && \
     touch /var/lib/haproxy/conf/{{os_http_be,os_edge_reencrypt_be,os_tcp_be,os_sni_passthrough,os_route_http_redirect,cert_config,os_wildcard_domain}.map,haproxy.config}
 
 COPY --from=openshift-router /usr/bin/openshift-router /usr/bin/
+COPY --from=openshift-router /usr/sbin/haproxy /usr/sbin/
 COPY --from=openshift-router /var/lib/haproxy /var/lib/haproxy
 
 RUN chown -R :0 /var/lib/haproxy && \
     chmod -R g+w /var/lib/haproxy
 
-WORKDIR /src
-COPY . /src
-RUN rm -rf etc-pki-entitlement rhsm.conf rhsm-ca
-RUN make clean
-RUN rm -f haproxy
-RUN make -f Makefile -j $(nproc) \
-     V=1 \
-     CPU="generic" \
-     TARGET="linux-glibc" \
-     USE_REGPARM=1 \
-     USE_OPENSSL=1 \
-     USE_PCRE=1 \
-     USE_ZLIB=1 \
-     USE_CRYPT_H=1 \
-     USE_LINUX_TPROXY=1 \
-     USE_GETADDRINFO=1 \
-     DEBUG="-DDEBUG_FULL"
-RUN ls -l haproxy
-RUN cp ./haproxy /usr/sbin/haproxy
-RUN setcap 'cap_net_bind_service=ep' /usr/sbin/haproxy
-RUN make clean
+WORKDIR /
+COPY ./build-haproxy-2.2.sh /
+RUN ls /
 
 USER 1001
 EXPOSE 80 443
