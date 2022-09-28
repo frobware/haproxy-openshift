@@ -5,7 +5,7 @@ set -o pipefail
 set -o errexit
 
 make -f Makefile -j $(nproc) \
-     V=1 \
+     V=0 \
      CPU="generic" \
      TARGET="linux-glibc" \
      USE_REGPARM=1 \
