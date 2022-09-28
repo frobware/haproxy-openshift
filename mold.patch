@@ -1,0 +1,13 @@
+diff --git a/Makefile b/Makefile
+index d5841a549..6de8ec5d6 100644
+--- a/Makefile
++++ b/Makefile
+@@ -159,7 +159,7 @@ ARCH =
+ #### Toolchain options.
+ # GCC is normally used both for compiling and linking.
+ CC = gcc
+-LD = $(CC)
++LD = $(CC) -B/usr/libexec/mold
+ 
+ #### Debug flags (typically "-g").
+ # Those flags only feed CFLAGS so it is not mandatory to use this form.
