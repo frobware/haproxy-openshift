@@ -29,6 +29,7 @@ git remote update
 for i in $(git tag -l --sort=v:refname | grep "v${series}"); do
     git checkout -f $i
     git clean -f -d -x
-    ${thisdir}/build-haproxy.sh clean all
+    patch -p1 < "$thisdir/mold.patch"
+    ${thisdir}/build-haproxy.sh
     mv haproxy /tmp/haproxy-${i#v}
 done
