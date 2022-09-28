@@ -26,8 +26,6 @@ series="${series#haproxy-}"
 
 git remote update
 
-export PATH=/usr/libexec/mold:$PATH
-
 for i in $(git tag -l --sort=v:refname | grep "v${series}"); do
     git checkout -f $i
     git clean -f -d -x
