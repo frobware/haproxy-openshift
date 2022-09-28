@@ -15,4 +15,4 @@ make -f Makefile -j $(nproc) \
      USE_CRYPT_H=1 \
      USE_LINUX_TPROXY=1 \
      USE_GETADDRINFO=1 \
-     DEBUG="-DDEBUG_FULL" "$@"
+     "$@"
