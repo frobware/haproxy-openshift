@@ -26,10 +26,12 @@ series="${series#haproxy-}"
 
 git remote update
 
+export PATH=/usr/libexec/mold:$PATH
+
 for i in $(git tag -l --sort=v:refname | grep "v${series}"); do
     git checkout -f $i
     git clean -f -d -x
-    patch -p1 < "$thisdir/mold.patch"
+    sed -i 's!LD = $(CC)!LD = $(CC) -B/usr/libexec/mold!' Makefile
     ${thisdir}/build-haproxy.sh
     mv haproxy /tmp/haproxy-${i#v}
 done
