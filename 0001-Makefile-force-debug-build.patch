@@ -1,0 +1,43 @@
+From 6fd90cdc5402b7ab0bd642db3b6d124dbfccdca6 Mon Sep 17 00:00:00 2001
+From: Andrew McDermott <aim@frobware.com>
+Date: Fri, 25 Mar 2022 09:32:47 +0000
+Subject: [PATCH] Makefile: force debug build
+
+---
+ Makefile | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 3ad30ad07..32ea61da7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -164,7 +164,7 @@ LD = $(CC)
+ 
+ #### Debug flags (typically "-g").
+ # Those flags only feed CFLAGS so it is not mandatory to use this form.
+-DEBUG_CFLAGS = -g
++DEBUG_CFLAGS = -g -ggdb3
+ 
+ #### Add -Werror when set to non-empty
+ ERR =
+@@ -253,7 +253,7 @@ EXTRA =
+ # feed CPU_CFLAGS, which in turn feed CFLAGS, so it is not mandatory to use
+ # them. You should not have to change these options. Better use CPU_CFLAGS or
+ # even CFLAGS instead.
+-CPU_CFLAGS.generic    = -O2
++CPU_CFLAGS.generic    = -Os -g -ggdb3
+ CPU_CFLAGS.native     = -O2 -march=native
+ CPU_CFLAGS.i586       = -O2 -march=i586
+ CPU_CFLAGS.i686       = -O2 -march=i686
+@@ -282,7 +282,7 @@ CFLAGS = $(ARCH_FLAGS) $(CPU_CFLAGS) $(DEBUG_CFLAGS) $(SPEC_CFLAGS)
+ # These LDFLAGS are used as the first "ld" options, regardless of any library
+ # path or any other option. They may be changed to add any linker-specific
+ # option at the beginning of the ld command line.
+-LDFLAGS = $(ARCH_FLAGS) -g
++LDFLAGS = $(ARCH_FLAGS) -g -ggdb3 -Os
+ 
+ #### list of all "USE_*" options. These ones must be updated if new options are
+ # added, so that the relevant options are properly added to the CFLAGS and to
+-- 
+2.35.1
+
