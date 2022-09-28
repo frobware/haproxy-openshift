@@ -6,10 +6,10 @@ thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
 git remote update
 
-for i in $(git tag -l | grep v2.3 | grep -v dev | sort -n); do
+for i in $(git tag -l --sort=v:refname | grep v2.3); do
     git checkout -f $i
     git clean -f -d -x
     echo  $i
-    ${thisdir}/../haproxy-openshift/build-haproxy-2.2.sh clean all
+    ${thisdir}/../haproxy-openshift/build-haproxy.sh clean all
     mv haproxy /tmp/haproxy-${i#v}
 done
