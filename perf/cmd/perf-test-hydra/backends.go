@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/erikdubbelboer/gspt"
 	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
@@ -78,7 +79,7 @@ func mustResolveCurrentHost() string {
 	return hostname
 }
 
-func startMetadataServer(backendsByType BackendsByTrafficType, port int) {
+func startMetadataServer(backendsByType BackendsByTrafficType, port int, postHandler func()) {
 	var mu sync.Mutex
 
 	printBackendsForType := func(w io.Writer, t termination.TrafficType) error {
@@ -164,9 +165,9 @@ func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, po
 		os.Exit(1)
 	}()
 
-	go startMetadataServer(backendsByType, port)
-
-	var children []int
+	go startMetadataServer(backendsByType, port, func() {
+		log.Println("posthandler called")
+	})
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -179,21 +180,24 @@ func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, po
 	for t, backends := range backendsByType {
 		for _, backend := range backends {
 			childEnv := []string{
-				fmt.Sprintf("CHILD_ID=%v", backend.Name),
 				fmt.Sprintf("%s=%v", ChildBackendEnvName, backend.Name),
 				fmt.Sprintf("%s=%v", ChildBackendTrafficTypeEnvName, t),
 			}
-			os.Args[1] = "serve-backend"
-			args := append(os.Args, fmt.Sprintf("#%v", backend.Name))
-			child, err := syscall.ForkExec(args[0], args, &syscall.ProcAttr{
+			// We want to be a child of the current
+			// process so the following fork/exec needs to
+			// change the current program arguments so
+			// that the exec, and subsequent command line
+			// parsing, ensures we call serve-backend
+			// (singular) and not server-backends
+			// (plural).
+			newArgs := os.Args[:]
+			newArgs[1] = "serve-backend"
+			args := append(newArgs, fmt.Sprintf("#%v", backend.Name))
+			if _, err := syscall.ForkExec(args[0], args, &syscall.ProcAttr{
 				Env:   append(os.Environ(), childEnv...),
 				Files: []uintptr{0, 1, 2, r.Fd()},
-			})
-			if err != nil {
+			}); err != nil {
 				return err
-			}
-			if child != 0 {
-				children = append(children, child)
 			}
 		}
 	}
@@ -267,6 +271,8 @@ func serveBackend(name, trafficType string, port int) error {
 			log.Fatal(err)
 		}
 	}
+
+	gspt.SetProcTitle(fmt.Sprintf("%s %v", backend.Name, backend.Port))
 
 	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
 	os.Exit(2)

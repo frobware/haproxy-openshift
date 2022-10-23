@@ -43,11 +43,14 @@ func main() {
 
 	go func() {
 		defer cancel()
-		s := <-sigc
-		log.Fatal("received signal, cancelling", s)
+		<-sigc
+		// log.Printf("exiting on signal %v", s)
+		// os.Exit(0)
 	}()
 
-	// ktx.BindTo(ctx, (*context.Context)(nil))
-
 	ktx.FatalIfErrorf(ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: ctx}))
+
+	if cli.Debug {
+		log.Printf("exiting")
+	}
 }

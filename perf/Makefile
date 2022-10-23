@@ -4,15 +4,15 @@ GO_FILES := $(wildcard ./cmd/perf-test-hydra/*.go)
 # 	CGOENABLED=0 go run ./cmd/perf-test-hydra/main.go $(filter-out main.go,$(GO_FILES))
 
 perf-test-hydra: gen fmt vet
-	CGOENABLED=0 go build -o $@ $(GO_FILES)
+	CGOENABLED=1 go build -o $@ $(GO_FILES)
 
->gen:
-	go generate ./...
+gen:
+	@go generate ./...
 
 fmt:
-	go fmt ./...
+	@go fmt ./...
 
 vet:
-	go vet ./...
+	@go vet ./...
 
 .PHONY: run perf-test-hydra gen fmt vet
