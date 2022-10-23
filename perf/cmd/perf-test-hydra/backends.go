@@ -1,90 +1,31 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"sync"
 	"syscall"
-	"time"
 
-	"github.com/erikdubbelboer/gspt"
 	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
-type Backend struct {
-	HostAddr    string                  `json:"host_addr"`
-	Name        string                  `json:"name"`
-	Port        int                     `json:"port"`
-	TrafficType termination.TrafficType `json:"traffic_type"`
-}
-
-type BackendsByTrafficType map[termination.TrafficType][]Backend
-
-const (
-	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
-	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
-)
-
-var (
-	//go:embed *.html
-	htmlFS embed.FS
-
-	//go:embed tls.crt
-	tlsCert string
-
-	//go:embed tls.key
-	tlsKey string
-)
-
-func mustCreateTemporaryFile(data []byte) string {
-	f, err := os.CreateTemp("", strconv.Itoa(os.Getpid()))
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = f.Write(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
-	return f.Name()
-}
-
-func tlsTemporaryKeyFile() string {
-	return mustCreateTemporaryFile([]byte(tlsKey))
-}
-
-func tlsTemporaryCertFile() string {
-	return mustCreateTemporaryFile([]byte(tlsCert))
-}
-
-func mustResolveCurrentHost() string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return hostname
-}
-
-func startMetadataServer(backendsByType BackendsByTrafficType, port int, postHandler func()) {
-	var mu sync.Mutex
+func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
+	// Provide synchronous access to the asynchronously registered
+	// port number for a backend.
+	var registeredBackends sync.Map
 
 	printBackendsForType := func(w io.Writer, t termination.TrafficType) error {
-		for _, b := range backendsByType[t] {
-			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v %v\n", b.Name, b.HostAddr, b.Port, b.TrafficType)); err != nil {
+		for _, b := range backendsByTrafficType[t] {
+			port, ok := registeredBackends.Load(b.Name)
+			if !ok {
+				panic("missing port for" + b.Name)
+			}
+			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v %v\n", b.Name, b.HostAddr, port, b.TrafficType)); err != nil {
 				return err
 			}
 		}
@@ -93,57 +34,46 @@ func startMetadataServer(backendsByType BackendsByTrafficType, port int, postHan
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
+	var mu sync.Mutex
+
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-		switch r.Method {
-		case "POST":
-			decoder := json.NewDecoder(r.Body)
-			decoder.DisallowUnknownFields()
-			var x Backend
-			if err := decoder.Decode(&x); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			words := strings.Split(x.Name, "-")
-			if len(words) != 4 {
-				http.Error(w, "expected 4 words", http.StatusBadRequest)
-				return
-			}
-			i, err := strconv.ParseInt(words[3], 10, 64)
-			if err != nil {
-				http.Error(w, "expected 4 words", http.StatusBadRequest)
-				return
-			}
-			backendsByType[x.TrafficType][i].Port = x.Port
-		default:
-			for _, t := range termination.AllTerminationTypes[:] {
-				printBackendsForType(w, t)
-			}
+
+		if r.Method != "POST" {
+			panic("unexpected: " + r.Method)
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		var x BoundBackend
+		if err := decoder.Decode(&x); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		registeredBackends.Store(x.Name, x.Port)
+		postNotifier(x)
+	})
+
+	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
+		for _, t := range termination.AllTerminationTypes[:] {
+			printBackendsForType(w, t)
 		}
 	})
 
 	mux.HandleFunc("/backends/edge", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
 		printBackendsForType(w, termination.Edge)
 	})
 
 	mux.HandleFunc("/backends/http", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
 		printBackendsForType(w, termination.HTTP)
 	})
 
 	mux.HandleFunc("/backends/passthrough", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
 		printBackendsForType(w, termination.Passthrough)
 	})
 
 	mux.HandleFunc("/backends/reencrypt", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
 		printBackendsForType(w, termination.Reencrypt)
 	})
 
@@ -152,22 +82,29 @@ func startMetadataServer(backendsByType BackendsByTrafficType, port int, postHan
 	}
 }
 
-func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, port int) error {
+func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
+	hostIPAddr := mustResolveCurrentHost()
+	backendsByTrafficType := BackendsByTrafficType{}
+
+	for _, t := range termination.AllTerminationTypes {
+		for i := 0; i < p.Backends; i++ {
+			backend := Backend{
+				HostAddr:    hostIPAddr,
+				Name:        fmt.Sprintf("%s-%v-%v", "openshift-http-scale", t, i),
+				TrafficType: t,
+			}
+			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
+		}
+	}
+
 	log.SetPrefix(fmt.Sprintf("[P %v] ", os.Getpid()))
-	log.Printf("pid: %d, ppid: %d, args: %s", os.Getpid(), os.Getppid(), os.Args)
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
-		// if any child exits then consider that fatal for the
-		// parent too.
 		signal.Notify(sigc, syscall.SIGCHLD)
 		log.Println(<-sigc)
 		os.Exit(1)
 	}()
-
-	go startMetadataServer(backendsByType, port, func() {
-		log.Println("posthandler called")
-	})
 
 	r, w, err := os.Pipe()
 	if err != nil {
@@ -177,7 +114,20 @@ func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, po
 	defer r.Close()
 	defer w.Close()
 
-	for t, backends := range backendsByType {
+	var backendsReady = make(chan bool)
+	var backendsRegistered = 0
+
+	go serveBackendMetadata(backendsByTrafficType, p.Port, func(b BoundBackend) {
+		backendsRegistered += 1
+		if backendsRegistered == len(backendsByTrafficType)*p.Backends {
+			backendsReady <- true
+			return
+		}
+	})
+
+	log.Printf("starting %d processes\n", len(backendsByTrafficType)*p.Backends)
+
+	for t, backends := range backendsByTrafficType {
 		for _, backend := range backends {
 			childEnv := []string{
 				fmt.Sprintf("%s=%v", ChildBackendEnvName, backend.Name),
@@ -189,9 +139,9 @@ func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, po
 			// that the exec, and subsequent command line
 			// parsing, ensures we call serve-backend
 			// (singular) and not server-backends
-			// (plural).
-			newArgs := os.Args[:]
-			newArgs[1] = "serve-backend"
+			// (plural). Otherwise we'll end up back here.
+			newArgs := os.Args[:1]
+			newArgs = append(newArgs, "serve-backend")
 			args := append(newArgs, fmt.Sprintf("#%v", backend.Name))
 			if _, err := syscall.ForkExec(args[0], args, &syscall.ProcAttr{
 				Env:   append(os.Environ(), childEnv...),
@@ -202,80 +152,8 @@ func startBackends(ctx context.Context, backendsByType BackendsByTrafficType, po
 		}
 	}
 
-	<-ctx.Done()
-	return nil
-}
-
-func serveBackend(name, trafficType string, port int) error {
-	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), name))
-
-	var t termination.TrafficType = termination.ParseTrafficType(trafficType)
-
-	l, err := net.Listen("tcp", "0.0.0.0:0")
-	if err != nil {
-		return err
-	}
-
-	// log.Printf("%s %v\n", name, l.Addr().(*net.TCPAddr).Port)
-
-	tlsCertFile := tlsTemporaryCertFile()
-	defer os.Remove(tlsCertFile)
-
-	tlsKeyFile := tlsTemporaryKeyFile()
-	defer os.Remove(tlsKeyFile)
-
-	go func() {
-		switch t {
-		case termination.HTTP, termination.Edge:
-			if err := http.Serve(l, http.FileServer(http.FS(htmlFS))); err != nil {
-				log.Fatal(err)
-			}
-		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(htmlFS)), tlsCertFile, tlsKeyFile); err != nil {
-				log.Fatal(err)
-			}
-		}
-	}()
-
-	backend := Backend{
-		HostAddr:    "127.0.0.1",
-		Name:        name,
-		Port:        l.Addr().(*net.TCPAddr).Port,
-		TrafficType: t,
-	}
-
-	jsonValue, err := json.Marshal(backend)
-	if err != nil {
-		panic(err)
-	}
-
-	var (
-		resp    *http.Response
-		retries int = 17
-	)
-
-	for retries > 0 {
-		resp, err = http.Post(fmt.Sprintf("http://127.0.0.1:%d/backends", port), "application/json", bytes.NewBuffer(jsonValue))
-		if err != nil {
-			retries -= 1
-		} else {
-			break
-		}
-		time.Sleep(42 * time.Millisecond)
-	}
-
-	if resp != nil {
-		defer resp.Body.Close()
-		_, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	gspt.SetProcTitle(fmt.Sprintf("%s %v", backend.Name, backend.Port))
-
-	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-	os.Exit(2)
-
+	<-backendsReady
+	log.Printf("metadata server running; pid: %d, ppid: %d, args: %s", os.Getpid(), os.Getppid(), os.Args)
+	<-p.Context.Done()
 	return nil
 }
