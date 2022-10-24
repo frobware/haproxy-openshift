@@ -51,9 +51,10 @@ type RequestConfig struct {
 	TrafficTypes      []TrafficType
 }
 
-type HAProxyConfig struct {
+type HAProxyGlobalConfig struct {
+	Globals
+
 	Backends  []HAProxyBackendConfig
-	Cert      string
 	HTTPPort  int
 	HTTPSPort int
 	Maxconn   int
@@ -69,6 +70,7 @@ type HAProxyBackendConfig struct {
 	OutputDir     string
 	Port          string
 	ServerCookie  string
+	TLSCACert     string
 	TrafficType   TrafficType
 }
 
@@ -189,6 +191,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 				OutputDir:     p.OutputDir,
 				Port:          words[2],
 				ServerCookie:  cookie(),
+				TLSCACert:     p.TLSCACert,
 				TrafficType:   t,
 			})
 		}
@@ -228,7 +231,8 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 }
 
 func (c *HAProxyGenCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
-	config := HAProxyConfig{
+	config := HAProxyGlobalConfig{
+		Globals:   p.Globals,
 		Backends:  backends,
 		HTTPPort:  *httpPort,
 		HTTPSPort: *httpsPort,
@@ -346,32 +350,7 @@ func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBacken
 func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	var certConfigMap bytes.Buffer
 
-	tlsKey, err := ioutil.ReadFile(p.TLSKey)
-	if err != nil {
-		return err
-	}
-
-	tlsCrt, err := ioutil.ReadFile(p.TLSCert)
-	if err != nil {
-		return err
-	}
-
-	pemContent := fmt.Sprintf("%s\n%s\n",
-		strings.TrimSuffix(string(tlsKey), "\n"),
-		strings.TrimSuffix(string(tlsCrt), "\n"))
-
-	pemFileForAllBackends := path.Join(p.OutputDir, "router", "certs", "all-backends.pem")
-
-	if err := createFile(pemFileForAllBackends, []byte(pemContent)); err != nil {
-		return err
-	}
-
 	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
-		// certFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
-		// if err := createFile(path.Join(p.OutputDir, "router", "certs", certFilename), []byte(fmt.Sprintf("%s\n%s\n", p.TLSCert, b.Name))); err != nil {
-		// 	return err
-		// }
-
 		mustWriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name))
 	}
 

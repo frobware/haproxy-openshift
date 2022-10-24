@@ -87,7 +87,7 @@ frontend fe_sni
   # option dontlognull
 
   # terminate ssl on edge
-  bind unix@{{.OutputDir}}/run/haproxy-sni.sock ssl crt {{.Cert}} crt-list {{.OutputDir}}/conf/cert_config.map accept-proxy
+  bind unix@{{.OutputDir}}/run/haproxy-sni.sock ssl crt {{.Certificate}} crt-list {{.OutputDir}}/conf/cert_config.map accept-proxy
   mode http
 
   # Strip off Proxy headers to prevent HTTpoxy (https://httpoxy.org/)

@@ -4,7 +4,7 @@ set -eu
 
 thisdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
-if ! type -P mkcert; then
+if ! type -P mkcert >/dev/null 2>&1; then
     echo "No mkcert utilility."
     echo "Install as: "
     echo "go install filippo.io/mkcert@latest"
@@ -12,10 +12,31 @@ if ! type -P mkcert; then
 fi
 
 certdir="$thisdir/certs"
-mkdir -p "$certdir"
+regenerate=0
+PARAMS=""
+
+while (( "$#" )); do
+    case "$1" in
+	-r|--regenerate)
+	    regenerate=1; shift
+	    ;;
+	*) # preserve positional arguments
+	    PARAMS="$PARAMS $1"
+	    shift
+	    ;;
+    esac
+done
+
+# reset positional arguments
+eval set -- "$PARAMS"
+
+if [[ -f "$certdir/full-chain.pem" ]] && [[ $regenerate -eq 0 ]]; then
+    exit 0
+fi
 
 export CAROOT="$certdir"
 
+mkdir -p "$certdir"
 mkcert \
     -client \
     -cert-file "$certdir/tls.crt" \
@@ -27,28 +48,5 @@ mkcert \
     127.0.0.1 \
     ::1
 
-if ! [[ -L tls.key ]]; then
-    echo "expected tls.key to be a symlink; not removing"
-    exit 1
-fi
-
-if ! [[ -L tls.crt ]]; then
-    echo "expected tls.crt to be a symlink; not removing"
-    exit 1
-fi
-
-cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" tls.key tls.crt > "$thisdir/full-chain.pem"
-
-rm -f tls.key tls.crt full-chain.pem
-
-ln -sf "$certdir/tls.crt" tls.crt
-ln -sf "$certdir/tls.key" tls.key
-ln -sf "$certdir/full-chain.pem" full-chain.pem
-
-# Sanity check; will exit with an error if they don't resolve.
-ls -lL tls.crt
-ls -lL tls.key
-ls -lL full-chain.pem
-ls -lR "$certdir"
-
-
+cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" "${certdir}/tls.key" "${certdir}/tls.crt" > "$certdir/full-chain.pem"
+ls -lR $certdir
