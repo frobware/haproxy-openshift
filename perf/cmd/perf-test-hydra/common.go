@@ -29,17 +29,6 @@ func (b BoundBackend) URL() string {
 
 type BackendsByTrafficType map[termination.TrafficType][]Backend
 
-type ServeBackendCmd struct {
-	Args []string `arg:""`
-}
-
-type ServeBackendsCmd struct{}
-
-const (
-	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
-	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
-)
-
 var (
 	//go:embed *.html
 	htmlFS embed.FS

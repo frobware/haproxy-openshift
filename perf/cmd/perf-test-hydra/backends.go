@@ -14,6 +14,13 @@ import (
 	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
+type ServeBackendsCmd struct{}
+
+const (
+	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
+	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
+)
+
 func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
 	// Provide synchronous access to the asynchronously registered
 	// port number for a backend.

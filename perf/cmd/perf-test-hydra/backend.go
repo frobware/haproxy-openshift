@@ -15,6 +15,10 @@ import (
 	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
+type ServeBackendCmd struct {
+	Args []string `arg:""`
+}
+
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	backendName, found := os.LookupEnv(ChildBackendEnvName)
 	if !found {
