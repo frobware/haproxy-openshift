@@ -15,7 +15,7 @@ type Globals struct {
 	Certificate  string      `help:"Path to certificate" default:"certs/full-chain.pem" type:"path"`
 	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
 	DiscoveryURL string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
-	HostPrefix   string      `help:"Hostname prefix" default:"openshift-http-scale"`
+	HostPrefix   string      `help:"Hostname prefix" default:"perf-test-hydra"`
 	MkCert       string      `help:"Path to mkcert script" default:"mkcert.bash" type:"path"`
 	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
 	OutputDir    string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
@@ -29,12 +29,12 @@ type Globals struct {
 type CLI struct {
 	Globals
 
-	HaproxyGen    HAProxyGenCmd    `cmd:"" help:"Generate HAProxy configuration."`
-	MakeCerts     MakeCertsCmd     `cmd:"" help:"Make dev certificates."`
-	PrintHosts    PrintHostsCmd    `cmd:"" help:"Print backend hostnames (/etc/hosts compatible)."`
-	ServeBackend  ServeBackendCmd  `cmd:"" help:"Serve backend." hidden:"true"`
-	ServeBackends ServeBackendsCmd `cmd:"" help:"Serve backends."`
-	Version       VersionCmd       `cmd:"" help:"Print version information and quit."`
+	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
+	GenCerts       GenCertsCmd       `cmd:"" help:"Generate certificates."`
+	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
+	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`
+	ServeBackends  ServeBackendsCmd  `cmd:"" help:"Serve backends."`
+	Version        VersionCmd        `cmd:"" help:"Print version information and quit."`
 }
 
 type ProgramCtx struct {

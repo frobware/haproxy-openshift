@@ -1,6 +1,6 @@
 package main
 
-type HAProxyGenCmd struct {
+type GenProxyConfigCmd struct {
 	HTTPPort  int  `default:"8080"`
 	HTTPSPort int  `default:"8443"`
 	Maxconn   int  `default:"0"`
@@ -9,11 +9,11 @@ type HAProxyGenCmd struct {
 	TLSReuse  bool `default:"true"`
 }
 
-type MakeCertsCmd struct {
+type GenCertsCmd struct {
 	Regenerate bool `default:"false" short:"r"`
 }
 
-type PrintHostsCmd struct {
+type GenHostsCmd struct {
 	Domain string `short:"d" default:"localdomain"`
 }
 

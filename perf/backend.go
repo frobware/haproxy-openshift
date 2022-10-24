@@ -38,8 +38,6 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	// log.Printf("%s %v\n", name, l.Addr().(*net.TCPAddr).Port)
-
 	go func() {
 		switch t {
 		case HTTPTraffic, EdgeTraffic:

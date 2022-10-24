@@ -125,7 +125,7 @@ backend be_no_sni
 frontend fe_no_sni
 
   # terminate ssl on edge
-  bind unix@{{.OutputDir}}/run/haproxy-no-sni.sock ssl crt /tmp/haproxy-default.pem accept-proxy
+  bind unix@{{.OutputDir}}/run/haproxy-no-sni.sock ssl crt {{.Certificate}} accept-proxy
   mode http
 
   # Strip off Proxy headers to prevent HTTpoxy (https://httpoxy.org/)

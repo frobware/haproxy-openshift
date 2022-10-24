@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func (c *MakeCertsCmd) Run(p *ProgramCtx) error {
+func (c *GenCertsCmd) Run(p *ProgramCtx) error {
 	return generateCerts(p, c.Regenerate)
 }
 

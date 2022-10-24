@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -147,7 +148,7 @@ func generateMBRequests(cfg RequestConfig, backends []HAProxyBackendConfig) []Re
 	return requests
 }
 
-func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
+func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 	if err := os.RemoveAll(p.OutputDir); err != nil {
 		return err
 	}
@@ -164,9 +165,13 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 			if len(words) < 3 {
 				return fmt.Errorf("not enough words in %q", metadata[i])
 			}
+			addrs, err := net.LookupIP(words[0])
+			if err != nil {
+				return err
+			}
 			backends = append(backends, HAProxyBackendConfig{
 				BackendCookie: cookie(),
-				HostAddr:      words[0],
+				HostAddr:      addrs[0].String(),
 				Name:          words[1],
 				OutputDir:     p.OutputDir,
 				Port:          words[2],
@@ -210,7 +215,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 	return c.generateMBRequests(p, backends)
 }
 
-func (c *HAProxyGenCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	config := HAProxyGlobalConfig{
 		Globals:   p.Globals,
 		Backends:  backends,
@@ -245,7 +250,7 @@ func (c *HAProxyGenCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBack
 	return createFile(path.Join(p.OutputDir, "conf", "error-page-503.http"), bytes.NewBuffer([]byte(error503)).Bytes())
 }
 
-func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	type MapEntryFunc func(backend HAProxyBackendConfig) string
 
 	backendMaps := []struct {
@@ -327,7 +332,7 @@ func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBacken
 	return nil
 }
 
-func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	var certConfigMap bytes.Buffer
 
 	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
@@ -337,7 +342,7 @@ func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBack
 	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfigMap.Bytes())
 }
 
-func (c *HAProxyGenCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	for _, clients := range []int64{1, 50, 100, 200} {
 		for _, scenario := range []struct {
 			Name         string

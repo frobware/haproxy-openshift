@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func (c *PrintHostsCmd) Run(p *ProgramCtx) error {
+func (c *GenHostsCmd) Run(p *ProgramCtx) error {
 	for _, t := range etcHosts(p, getOutboundIPAddr(), c.Domain) {
 		fmt.Println(t)
 	}
