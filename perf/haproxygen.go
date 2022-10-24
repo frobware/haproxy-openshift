@@ -77,6 +77,7 @@ const (
 	ReencryptBackendMapName = "os_edge_reencrypt_be.map"
 	SNIPassthroughMapName   = "os_sni_passthrough.map"
 	TCPBackendMapName       = "os_tcp_be.map"
+	HTTPRedirectMapName     = "os_route_http_redirect.map"
 )
 
 //go:embed globals.tmpl
@@ -131,34 +132,6 @@ func fetchBackendMetadata[T TrafficType](t T) ([]string, error) {
 	return nil, fmt.Errorf("unexpected status %v", resp.StatusCode)
 }
 
-func generateHAProxyBackendConfig(path string) ([]HAProxyBackendConfig, error) {
-	var backends []HAProxyBackendConfig
-
-	for _, t := range AllTrafficTypes {
-		metadata, err := fetchBackendMetadata(t)
-		if err != nil {
-			return nil, err
-		}
-		for i := range metadata {
-			words := strings.Split(metadata[i], " ")
-			if len(words) < 3 {
-				return nil, fmt.Errorf("not enough words in %q", metadata[i])
-			}
-			backends = append(backends, HAProxyBackendConfig{
-				BackendCookie: cookie(),
-				HostAddr:      words[0],
-				Name:          words[1],
-				OutputDir:     path,
-				Port:          words[2],
-				ServerCookie:  cookie(),
-				TrafficType:   t,
-			})
-		}
-	}
-
-	return backends, nil
-}
-
 func filterBackendsByType(types []TrafficType, backends []HAProxyBackendConfig) []HAProxyBackendConfig {
 	var result []HAProxyBackendConfig
 
@@ -197,13 +170,66 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	allBackends, err := generateHAProxyBackendConfig(p.OutputDir)
-	if err != nil {
+	var backends []HAProxyBackendConfig
+
+	for _, t := range AllTrafficTypes {
+		metadata, err := fetchBackendMetadata(t)
+		if err != nil {
+			return err
+		}
+		for i := range metadata {
+			words := strings.Split(metadata[i], " ")
+			if len(words) < 3 {
+				return fmt.Errorf("not enough words in %q", metadata[i])
+			}
+			backends = append(backends, HAProxyBackendConfig{
+				BackendCookie: cookie(),
+				HostAddr:      words[0],
+				Name:          words[1],
+				OutputDir:     p.OutputDir,
+				Port:          words[2],
+				ServerCookie:  cookie(),
+				TrafficType:   t,
+			})
+		}
+	}
+
+	if err := os.MkdirAll(path.Join(p.OutputDir, "run"), 0755); err != nil {
 		return err
 	}
 
+	// create known paths that need to exist.
+	for _, dirPath := range [][]string{
+		{"conf"},
+		{"log"},
+		{"router", "cacerts"},
+		{"router", "certs"},
+		{"run"},
+	} {
+		paths := path.Join(p.OutputDir, path.Join(dirPath...))
+		if err := os.MkdirAll(paths, 0755); err != nil {
+			return err
+		}
+	}
+
+	if err := c.generateMainConfig(p, backends); err != nil {
+		return err
+	}
+
+	if err := c.generateMapFiles(p, backends); err != nil {
+		return err
+	}
+
+	if err := c.generateCertConfig(p, backends); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *HAProxyGenCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	config := HAProxyConfig{
-		Backends:  allBackends,
+		Backends:  backends,
 		HTTPPort:  *httpPort,
 		HTTPSPort: *httpsPort,
 		Maxconn:   *maxconn,
@@ -224,15 +250,27 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
+	if err := createFile(path.Join(p.OutputDir, "conf", "haproxy.config"), haproxyConf.Bytes()); err != nil {
+		return err
+	}
+
+	if err := createFile(path.Join(p.OutputDir, "conf", "error-page-404.http"), bytes.NewBuffer([]byte(error404)).Bytes()); err != nil {
+		return err
+	}
+
+	return createFile(path.Join(p.OutputDir, "conf", "error-page-503.http"), bytes.NewBuffer([]byte(error503)).Bytes())
+}
+
+func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	type MapEntryFunc func(backend HAProxyBackendConfig) string
 
-	maps := []struct {
-		Filename     string
+	backendMaps := []struct {
+		MapName      string
 		TrafficTypes []TrafficType
 		MapEntry     MapEntryFunc
 		Buffer       *bytes.Buffer
 	}{{
-		Filename:     HTTPBackendMapName,
+		MapName:      HTTPBackendMapName,
 		TrafficTypes: []TrafficType{HTTPTraffic},
 		Buffer:       &bytes.Buffer{},
 		MapEntry: func(b HAProxyBackendConfig) string {
@@ -244,7 +282,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 			}
 		},
 	}, {
-		Filename:     ReencryptBackendMapName,
+		MapName:      ReencryptBackendMapName,
 		TrafficTypes: []TrafficType{ReencryptTraffic, EdgeTraffic},
 		Buffer:       &bytes.Buffer{},
 		MapEntry: func(b HAProxyBackendConfig) string {
@@ -258,7 +296,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 			}
 		},
 	}, {
-		Filename:     SNIPassthroughMapName,
+		MapName:      SNIPassthroughMapName,
 		TrafficTypes: []TrafficType{PassthroughTraffic},
 		Buffer:       &bytes.Buffer{},
 		MapEntry: func(b HAProxyBackendConfig) string {
@@ -270,7 +308,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 			}
 		},
 	}, {
-		Filename:     TCPBackendMapName,
+		MapName:      TCPBackendMapName,
 		TrafficTypes: []TrafficType{PassthroughTraffic},
 		Buffer:       &bytes.Buffer{},
 		MapEntry: func(b HAProxyBackendConfig) string {
@@ -281,31 +319,71 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 				panic("unexpected traffic type: " + b.TrafficType)
 			}
 		},
+	}, {
+		MapName:      HTTPRedirectMapName,
+		TrafficTypes: []TrafficType{},
+		Buffer:       &bytes.Buffer{},
+		MapEntry: func(b HAProxyBackendConfig) string {
+			// no support for redirects; this is deliberate
+			return ""
+		},
 	}}
 
-	if err := createFile(path.Join(p.OutputDir, "conf", "haproxy.config"), haproxyConf.Bytes()); err != nil {
-		return err
-	}
-
-	if err := createFile(path.Join(p.OutputDir, "conf", "error-page-404.http"), bytes.NewBuffer([]byte(error404)).Bytes()); err != nil {
-		return err
-	}
-
-	if err := createFile(path.Join(p.OutputDir, "conf", "error-page-503.http"), bytes.NewBuffer([]byte(error503)).Bytes()); err != nil {
-		return err
-	}
-
-	for _, m := range maps {
-		for _, b := range filterBackendsByType(m.TrafficTypes, allBackends) {
+	for _, m := range backendMaps {
+		for _, b := range filterBackendsByType(m.TrafficTypes, backends) {
 			if _, err := io.WriteString(m.Buffer, m.MapEntry(b)); err != nil {
 				return err
 			}
 		}
-		if err := createFile(path.Join(p.OutputDir, "conf", m.Filename), m.Buffer.Bytes()); err != nil {
+		if err := createFile(path.Join(p.OutputDir, "conf", m.MapName), m.Buffer.Bytes()); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+	var certConfig bytes.Buffer
+
+	tlsKey, err := os.ReadFile(p.TLSKey)
+	if err != nil {
+		return err
+	}
+
+	tlsCert, err := os.ReadFile(p.TLSCert)
+	if err != nil {
+		return err
+	}
+
+	tlsKey = []byte(strings.TrimSuffix(string(tlsKey), "\n"))
+	tlsCert = []byte(strings.TrimSuffix(string(tlsCert), "\n"))
+
+	var pemFileContents bytes.Buffer
+	if _, err := io.WriteString(&pemFileContents, fmt.Sprintf("%s\n%s\n", tlsKey, tlsCert)); err != nil {
+		return err
+	}
+
+	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
+		pemFileBasename := fmt.Sprintf("%s.pem", b.Name)
+		pemFilePath := fmt.Sprintf(path.Join(p.OutputDir, "router", "certs", fmt.Sprintf("be_secure:%s", pemFileBasename)))
+		if err := createFile(pemFilePath, pemFileContents.Bytes()); err != nil {
+			return err
+		}
+		destCaCert := fmt.Sprintf(path.Join(p.OutputDir, "router", "cacerts", fmt.Sprintf("be_secure:%s", pemFileBasename)))
+		if err := createFile(destCaCert, pemFileContents.Bytes()); err != nil {
+			return err
+		}
+		entry := fmt.Sprintf("%s %s\n", pemFilePath, b.Name)
+		if _, err := io.WriteString(&certConfig, entry); err != nil {
+			return err
+		}
+	}
+
+	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfig.Bytes())
+}
+
+func (c *HAProxyGenCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	for _, clients := range []int64{1, 50, 100, 200} {
 		for _, scenario := range []struct {
 			Name         string
@@ -324,7 +402,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 					TLSSessionReuse:   false,
 					TrafficTypes:      scenario.TrafficTypes,
 				}
-				requests := generateMBRequests(config, filterBackendsByType(scenario.TrafficTypes, allBackends))
+				requests := generateMBRequests(config, filterBackendsByType(scenario.TrafficTypes, backends))
 				data, err := json.MarshalIndent(requests, "", "  ")
 				if err != nil {
 					return err
@@ -339,7 +417,6 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 					log.Fatalf("error: failed to create path: %q: %v", path, err)
 				}
 				filename := fmt.Sprintf("%s/requests.json", path)
-				fmt.Println(filename)
 				if err := createFile(filename, data); err != nil {
 					log.Fatalf("error generating %s: %v", filename, err)
 				}
