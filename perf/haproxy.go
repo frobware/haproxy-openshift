@@ -353,7 +353,7 @@ func (c *HAProxyGenCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBack
 				config := RequestConfig{
 					Clients:           clients,
 					KeepAliveRequests: keepAliveRequests,
-					TLSSessionReuse:   false,
+					TLSSessionReuse:   c.TLSReuse,
 					TrafficTypes:      scenario.TrafficTypes,
 				}
 				requests := generateMBRequests(config, filterBackendsByType(scenario.TrafficTypes, backends))

@@ -80,6 +80,9 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 		printBackendsForType(w, ReencryptTraffic)
 	})
 
+	go func() {
+	}()
+
 	if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", port), mux); err != nil {
 		log.Fatal(err)
 	}
