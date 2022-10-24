@@ -5,3 +5,4 @@
 /perf/cmd/perf-test-hydra/commit.txt
 *.pem
 /perf/certs/
+tls.*
