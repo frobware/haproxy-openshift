@@ -43,7 +43,7 @@ backend be_secure:{{.Name}}
   http-request add-header X-Forwarded-Proto-Version h2 if { ssl_fc_alpn -i h2 }
   http-request add-header Forwarded for=%[src];host=%[req.hdr(host)];proto=%[req.hdr(X-Forwarded-Proto)]
   cookie {{.BackendCookie}} insert indirect nocache httponly secure attr SameSite=None
-  server pod:{{.Name}}:{{.HostAddr}}:{{.Port}} {{.HostAddr}}:{{.Port}} cookie {{.ServerCookie}} weight 1 ssl verify required ca-file {{.OutputDir}}/router/cacerts/be_secure:{{.Name}}.pem
+  server pod:{{.Name}}:{{.HostAddr}}:{{.Port}} {{.HostAddr}}:{{.Port}} cookie {{.ServerCookie}} weight 1 ssl verify required ca-file {{.OutputDir}}/router/cacerts/{{.TrafficType}}:{{.Name}}.pem
   {{ else if eq .TrafficType "passthrough" }}
 backend be_tcp:{{.Name}}
   balance source

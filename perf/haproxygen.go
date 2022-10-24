@@ -15,6 +15,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/frobware/haproxy-openshift/perf/certgen"
 )
 
 type HAProxyGenCmd struct {
@@ -344,43 +346,30 @@ func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBacken
 }
 
 func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
-	var certConfig bytes.Buffer
-
-	tlsKey, err := os.ReadFile(p.TLSKey)
-	if err != nil {
-		return err
-	}
-
-	tlsCert, err := os.ReadFile(p.TLSCert)
-	if err != nil {
-		return err
-	}
-
-	tlsKey = []byte(strings.TrimSuffix(string(tlsKey), "\n"))
-	tlsCert = []byte(strings.TrimSuffix(string(tlsCert), "\n"))
-
-	var pemFileContents bytes.Buffer
-	if _, err := io.WriteString(&pemFileContents, fmt.Sprintf("%s\n%s\n", tlsKey, tlsCert)); err != nil {
-		return err
-	}
+	var certConfigMap bytes.Buffer
 
 	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
-		pemFileBasename := fmt.Sprintf("%s.pem", b.Name)
-		pemFilePath := fmt.Sprintf(path.Join(p.OutputDir, "router", "certs", fmt.Sprintf("be_secure:%s", pemFileBasename)))
-		if err := createFile(pemFilePath, pemFileContents.Bytes()); err != nil {
+		key, crt, caCrt, err := certgen.MakeCerts([]string{b.Name})
+		if err != nil {
 			return err
 		}
-		destCaCert := fmt.Sprintf(path.Join(p.OutputDir, "router", "cacerts", fmt.Sprintf("be_secure:%s", pemFileBasename)))
-		if err := createFile(destCaCert, pemFileContents.Bytes()); err != nil {
+
+		certFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
+		if err := createFile(path.Join(p.OutputDir, "router", "certs", certFilename), []byte(fmt.Sprintf("%s\n%s\n", crt, key))); err != nil {
 			return err
 		}
-		entry := fmt.Sprintf("%s %s\n", pemFilePath, b.Name)
-		if _, err := io.WriteString(&certConfig, entry); err != nil {
+
+		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", path.Join(p.OutputDir, "router", "certs", certFilename), b.Name)); err != nil {
+			return err
+		}
+
+		destCAFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
+		if err := createFile(path.Join(p.OutputDir, "router", "cacerts", destCAFilename), []byte(caCrt)); err != nil {
 			return err
 		}
 	}
 
-	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfig.Bytes())
+	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfigMap.Bytes())
 }
 
 func (c *HAProxyGenCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBackendConfig) error {
@@ -414,11 +403,11 @@ func (c *HAProxyGenCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBack
 					config.Clients,
 					config.KeepAliveRequests)
 				if err := os.MkdirAll(path, 0755); err != nil {
-					log.Fatalf("error: failed to create path: %q: %v", path, err)
+					return fmt.Errorf("failed to create path: %q: %v", path, err)
 				}
 				filename := fmt.Sprintf("%s/requests.json", path)
 				if err := createFile(filename, data); err != nil {
-					log.Fatalf("error generating %s: %v", filename, err)
+					return fmt.Errorf("error generating %s: %v", filename, err)
 				}
 			}
 		}

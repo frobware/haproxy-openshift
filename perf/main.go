@@ -17,7 +17,7 @@ type Globals struct {
 	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
 	OutputDir    string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
 	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
-	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"ca.pem" type:"path"`
+	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"rootCA.pem" type:"path"`
 	TLSCert      string      `help:"Path to TLS certificate file" default:"tls.crt" type:"path"`
 	TLSKey       string      `help:"Path to TLS key file" default:"tls.key" type:"path"`
 	Version      VersionFlag `help:"Print version information and quit."`
