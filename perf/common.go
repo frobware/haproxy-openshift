@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -54,6 +56,12 @@ func mustCreateTemporaryFile(data []byte) string {
 	return f.Name()
 }
 
+func mustWriteString(b *bytes.Buffer, s string) {
+	if _, err := io.WriteString(b, s); err != nil {
+		panic(err)
+	}
+}
+
 func mustResolveCurrentHost() string {
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -65,7 +73,7 @@ func mustResolveCurrentHost() string {
 
 // TODO fix me; we want anything but localhost returned.
 func getOutboundIPAddr() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
 		log.Fatal(err)
 	}

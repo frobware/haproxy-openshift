@@ -9,14 +9,11 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"path"
 	"strings"
-
-	"github.com/frobware/haproxy-openshift/perf/certgen"
 )
 
 type HAProxyGenCmd struct {
@@ -56,6 +53,7 @@ type RequestConfig struct {
 
 type HAProxyConfig struct {
 	Backends  []HAProxyBackendConfig
+	Cert      string
 	HTTPPort  int
 	HTTPSPort int
 	Maxconn   int
@@ -348,25 +346,33 @@ func (c *HAProxyGenCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBacken
 func (c *HAProxyGenCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	var certConfigMap bytes.Buffer
 
+	tlsKey, err := ioutil.ReadFile(p.TLSKey)
+	if err != nil {
+		return err
+	}
+
+	tlsCrt, err := ioutil.ReadFile(p.TLSCert)
+	if err != nil {
+		return err
+	}
+
+	pemContent := fmt.Sprintf("%s\n%s\n",
+		strings.TrimSuffix(string(tlsKey), "\n"),
+		strings.TrimSuffix(string(tlsCrt), "\n"))
+
+	pemFileForAllBackends := path.Join(p.OutputDir, "router", "certs", "all-backends.pem")
+
+	if err := createFile(pemFileForAllBackends, []byte(pemContent)); err != nil {
+		return err
+	}
+
 	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
-		key, crt, caCrt, err := certgen.MakeCerts([]string{b.Name})
-		if err != nil {
-			return err
-		}
+		// certFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
+		// if err := createFile(path.Join(p.OutputDir, "router", "certs", certFilename), []byte(fmt.Sprintf("%s\n%s\n", p.TLSCert, b.Name))); err != nil {
+		// 	return err
+		// }
 
-		certFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
-		if err := createFile(path.Join(p.OutputDir, "router", "certs", certFilename), []byte(fmt.Sprintf("%s\n%s\n", crt, key))); err != nil {
-			return err
-		}
-
-		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", path.Join(p.OutputDir, "router", "certs", certFilename), b.Name)); err != nil {
-			return err
-		}
-
-		destCAFilename := fmt.Sprintf("%s:%s.pem", b.TrafficType, b.Name)
-		if err := createFile(path.Join(p.OutputDir, "router", "cacerts", destCAFilename), []byte(caCrt)); err != nil {
-			return err
-		}
+		mustWriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name))
 	}
 
 	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfigMap.Bytes())

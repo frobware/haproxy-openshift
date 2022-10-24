@@ -20,6 +20,7 @@ type Globals struct {
 	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"rootCA.pem" type:"path"`
 	TLSCert      string      `help:"Path to TLS certificate file" default:"tls.crt" type:"path"`
 	TLSKey       string      `help:"Path to TLS key file" default:"tls.key" type:"path"`
+	Certificate  string      `help:"Path to full chain certificate " default:"full-chain.pem" type:"path"`
 	Version      VersionFlag `help:"Print version information and quit."`
 }
 

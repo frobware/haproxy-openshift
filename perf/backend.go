@@ -64,7 +64,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	jsonValue, err := json.Marshal(boundBackend)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	var (
@@ -83,16 +83,16 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	}
 
 	if err != nil {
-		log.Fatalf("POST failed for %+v: %v\n", boundBackend, err)
+		return fmt.Errorf("POST failed for %+v: %v\n", boundBackend, err)
 	}
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
+		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
 	}
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	gspt.SetProcTitle(fmt.Sprintf("%s %v", boundBackend.Name, boundBackend.Port))

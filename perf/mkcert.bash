@@ -37,13 +37,18 @@ if ! [[ -L tls.crt ]]; then
     exit 1
 fi
 
-rm -f tls.key tls.crt
+cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" tls.key tls.crt > "$thisdir/full-chain.pem"
+
+rm -f tls.key tls.crt full-chain.pem
+
 ln -sf "$certdir/tls.crt" tls.crt
 ln -sf "$certdir/tls.key" tls.key
+ln -sf "$certdir/full-chain.pem" full-chain.pem
 
 # Sanity check; will exit with an error if they don't resolve.
 ls -lL tls.crt
 ls -lL tls.key
+ls -lL full-chain.pem
 ls -lR "$certdir"
 
-cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" tls.crt > /tmp/haproxy-default.pem
+
