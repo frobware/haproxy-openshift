@@ -45,3 +45,5 @@ ln -sf "$certdir/tls.key" tls.key
 ls -lL tls.crt
 ls -lL tls.key
 ls -lR "$certdir"
+
+cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" tls.crt > /tmp/haproxy-default.pem
