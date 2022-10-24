@@ -48,7 +48,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	go func() {
 		switch t {
-		case HTTP, Edge:
+		case HTTPTraffic, EdgeTraffic:
 			if err := http.Serve(l, http.FileServer(http.FS(htmlFS))); err != nil {
 				log.Fatal(err)
 			}

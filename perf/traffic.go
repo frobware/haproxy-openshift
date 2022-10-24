@@ -3,22 +3,22 @@ package main
 type TrafficType string
 
 const (
-	Edge        TrafficType = "edge"
-	HTTP        TrafficType = "http"
-	Passthrough TrafficType = "passthrough"
-	Reencrypt   TrafficType = "reencrypt"
+	EdgeTraffic        TrafficType = "edge"
+	HTTPTraffic        TrafficType = "http"
+	PassthroughTraffic TrafficType = "passthrough"
+	ReencryptTraffic   TrafficType = "reencrypt"
 )
 
 var AllTrafficTypes = [...]TrafficType{
-	Edge,
-	HTTP,
-	Passthrough,
-	Reencrypt,
+	EdgeTraffic,
+	HTTPTraffic,
+	PassthroughTraffic,
+	ReencryptTraffic,
 }
 
 func (t TrafficType) Scheme() string {
 	switch t {
-	case HTTP:
+	case HTTPTraffic:
 		return "http"
 	default:
 		return "https"
@@ -27,7 +27,7 @@ func (t TrafficType) Scheme() string {
 
 func (t TrafficType) Port() int64 {
 	switch t {
-	case HTTP:
+	case HTTPTraffic:
 		return 8080
 	default:
 		return 8443
@@ -37,13 +37,13 @@ func (t TrafficType) Port() int64 {
 func ParseTrafficType(s string) TrafficType {
 	switch s {
 	case "http":
-		return HTTP
+		return HTTPTraffic
 	case "edge":
-		return Edge
+		return EdgeTraffic
 	case "reencrypt":
-		return Reencrypt
+		return ReencryptTraffic
 	case "passthrough":
-		return Passthrough
+		return PassthroughTraffic
 	}
 	panic("unknown taffic type" + s)
 }

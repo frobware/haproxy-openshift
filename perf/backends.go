@@ -30,7 +30,7 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 			if !ok {
 				panic("missing port for" + b.Name)
 			}
-			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v %v\n", b.Name, b.HostAddr, port, b.TrafficType)); err != nil {
+			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v %v\n", b.HostAddr, b.Name, port, b.TrafficType)); err != nil {
 				return err
 			}
 		}
@@ -67,19 +67,19 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 	})
 
 	mux.HandleFunc("/backends/edge", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, Edge)
+		printBackendsForType(w, EdgeTraffic)
 	})
 
 	mux.HandleFunc("/backends/http", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, HTTP)
+		printBackendsForType(w, HTTPTraffic)
 	})
 
 	mux.HandleFunc("/backends/passthrough", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, Passthrough)
+		printBackendsForType(w, PassthroughTraffic)
 	})
 
 	mux.HandleFunc("/backends/reencrypt", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, Reencrypt)
+		printBackendsForType(w, ReencryptTraffic)
 	})
 
 	if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", port), mux); err != nil {
@@ -92,10 +92,10 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	backendsByTrafficType := BackendsByTrafficType{}
 
 	for _, t := range AllTrafficTypes {
-		for i := 0; i < p.Backends; i++ {
+		for i := 0; i < p.Nbackends; i++ {
 			backend := Backend{
 				HostAddr:    hostIPAddr,
-				Name:        fmt.Sprintf("%s-%v-%v", p.HostnamePrefix, t, i),
+				Name:        fmt.Sprintf("%s-%v-%v", p.HostPrefix, t, i),
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
@@ -124,13 +124,15 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	go serveBackendMetadata(backendsByTrafficType, p.Port, func(b BoundBackend) {
 		backendsRegistered += 1
-		if backendsRegistered == len(backendsByTrafficType)*p.Backends {
+		if backendsRegistered == len(backendsByTrafficType)*p.Nbackends {
 			backendsReady <- true
 			return
 		}
 	})
 
-	log.Printf("starting %d backends\n", len(backendsByTrafficType)*p.Backends)
+	log.Printf("starting %d backends for traffic types: %v\n",
+		len(AllTrafficTypes)*p.Nbackends/len(AllTrafficTypes),
+		AllTrafficTypes)
 
 	for t, backends := range backendsByTrafficType {
 		for _, backend := range backends {
@@ -158,6 +160,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	}
 
 	<-backendsReady
+	log.Printf("%d backends registered", backendsRegistered)
 	log.Printf("metadata server running at http://%s:%v/backends\n", hostIPAddr, p.Port)
 	<-p.Context.Done()
 	return nil

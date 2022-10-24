@@ -11,23 +11,25 @@ import (
 )
 
 type Globals struct {
-	Backends       int         `help:"Number of backends per traffic type" short:"b" default:"1"`
-	Debug          bool        `help:"Enable debug mode" short:"D" default:"false"`
-	HostnamePrefix string      `help:"Backend name prefix" default:"openshift-http-scale"`
-	OutputDir      string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
-	Port           int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
-	TLSCACert      string      `help:"Trust certs signed only by this CA" default:"ca.pem" type:"path"`
-	TLSCert        string      `help:"Path to TLS certificate file" default:"cert.pem" type:"path"`
-	TLSKey         string      `help:"Path to TLS key file" default:"key.pem" type:"path"`
-	Version        VersionFlag `help:"Print version information and quit."`
+	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
+	DiscoveryURL string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
+	HostPrefix   string      `help:"Hostname prefix" default:"openshift-http-scale"`
+	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
+	OutputDir    string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
+	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
+	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"ca.pem" type:"path"`
+	TLSCert      string      `help:"Path to TLS certificate file" default:"cert.pem" type:"path"`
+	TLSKey       string      `help:"Path to TLS key file" default:"key.pem" type:"path"`
+	Version      VersionFlag `help:"Print version information and quit."`
 }
 
 type CLI struct {
 	Globals
 
+	HaproxyGen    HAProxyGenCmd    `cmd:"" help:"Generate HAProxy configuration."`
 	PrintHosts    PrintHostsCmd    `cmd:"" help:"Print backend hostnames (/etc/hosts compatible)."`
-	ServeBackends ServeBackendsCmd `cmd:"" help:"Serve backends."`
 	ServeBackend  ServeBackendCmd  `cmd:"" help:"Serve backend." hidden:"true"`
+	ServeBackends ServeBackendsCmd `cmd:"" help:"Serve backends."`
 	Version       VersionCmd       `cmd:"" help:"Print the version information."`
 }
 

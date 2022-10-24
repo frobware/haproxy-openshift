@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -70,7 +71,7 @@ func mustResolveCurrentHost() string {
 	return hostname
 }
 
-// TODO fix me
+// TODO fix me; we want anything but localhost returned.
 func getOutboundIPAddr() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
@@ -79,4 +80,20 @@ func getOutboundIPAddr() net.IP {
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP
+}
+
+func createFile(path string, data []byte) error {
+	dirname := filepath.Dir(path)
+	if err := os.MkdirAll(dirname, 0755); err != nil {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
