@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/erikdubbelboer/gspt"
-	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
 type ServeBackendCmd struct {
@@ -32,7 +31,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), backendName))
 
-	var t termination.TrafficType = termination.ParseTrafficType(trafficType)
+	var t TrafficType = ParseTrafficType(trafficType)
 
 	l, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
@@ -49,7 +48,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	go func() {
 		switch t {
-		case termination.HTTP, termination.Edge:
+		case HTTP, Edge:
 			if err := http.Serve(l, http.FileServer(http.FS(htmlFS))); err != nil {
 				log.Fatal(err)
 			}

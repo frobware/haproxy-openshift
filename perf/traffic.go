@@ -1,4 +1,4 @@
-package termination
+package main
 
 type TrafficType string
 
@@ -9,7 +9,7 @@ const (
 	Reencrypt   TrafficType = "reencrypt"
 )
 
-var AllTerminationTypes = [...]TrafficType{
+var AllTrafficTypes = [...]TrafficType{
 	Edge,
 	HTTP,
 	Passthrough,

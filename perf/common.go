@@ -7,14 +7,12 @@ import (
 	"net"
 	"os"
 	"strconv"
-
-	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
 type Backend struct {
-	HostAddr    string                  `json:"host_addr"`
-	Name        string                  `json:"name"`
-	TrafficType termination.TrafficType `json:"traffic_type"`
+	HostAddr    string      `json:"host_addr"`
+	Name        string      `json:"name"`
+	TrafficType TrafficType `json:"traffic_type"`
 }
 
 type BoundBackend struct {
@@ -27,7 +25,7 @@ func (b BoundBackend) URL() string {
 	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
 }
 
-type BackendsByTrafficType map[termination.TrafficType][]Backend
+type BackendsByTrafficType map[TrafficType][]Backend
 
 var (
 	//go:embed *.html

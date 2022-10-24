@@ -10,8 +10,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-
-	"github.com/frobware/haproxy-openshift/perf/pkg/termination"
 )
 
 type ServeBackendsCmd struct{}
@@ -26,7 +24,7 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 	// port number for a backend.
 	var registeredBackends sync.Map
 
-	printBackendsForType := func(w io.Writer, t termination.TrafficType) error {
+	printBackendsForType := func(w io.Writer, t TrafficType) error {
 		for _, b := range backendsByTrafficType[t] {
 			port, ok := registeredBackends.Load(b.Name)
 			if !ok {
@@ -63,25 +61,25 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
-		for _, t := range termination.AllTerminationTypes[:] {
+		for _, t := range AllTrafficTypes[:] {
 			printBackendsForType(w, t)
 		}
 	})
 
 	mux.HandleFunc("/backends/edge", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, termination.Edge)
+		printBackendsForType(w, Edge)
 	})
 
 	mux.HandleFunc("/backends/http", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, termination.HTTP)
+		printBackendsForType(w, HTTP)
 	})
 
 	mux.HandleFunc("/backends/passthrough", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, termination.Passthrough)
+		printBackendsForType(w, Passthrough)
 	})
 
 	mux.HandleFunc("/backends/reencrypt", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, termination.Reencrypt)
+		printBackendsForType(w, Reencrypt)
 	})
 
 	if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", port), mux); err != nil {
@@ -93,11 +91,11 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	hostIPAddr := mustResolveCurrentHost()
 	backendsByTrafficType := BackendsByTrafficType{}
 
-	for _, t := range termination.AllTerminationTypes {
+	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Backends; i++ {
 			backend := Backend{
 				HostAddr:    hostIPAddr,
-				Name:        fmt.Sprintf("%s-%v-%v", "openshift-http-scale", t, i),
+				Name:        fmt.Sprintf("%s-%v-%v", p.HostnamePrefix, t, i),
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
