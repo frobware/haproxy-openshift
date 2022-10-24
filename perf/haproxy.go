@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"html/template"
 	"io"
@@ -88,16 +87,6 @@ var error404 string
 //go:embed haproxy/error-page-503.http
 var error503 string
 
-var (
-	discoveryURL = flag.String("discovery", "http://localhost:2000", "backend discovery URL")
-	httpPort     = flag.Int("http-port", 8080, "haproxy http port setting")
-	httpsPort    = flag.Int("https-port", 8443, "haproxy https port setting")
-	maxconn      = flag.Int("maxconn", 0, "haproxy maxconn setting")
-	nbthread     = flag.Int("nbthread", 4, "haproxy nbthread setting")
-	statsPort    = flag.Int("stats-port", 1936, "haproxy https port setting")
-	tlsreuse     = flag.Bool("tlsreuse", true, "enable TLS reuse")
-)
-
 func cookie() string {
 	runes := []rune("0123456789abcdef")
 	b := make([]rune, 32)
@@ -107,8 +96,8 @@ func cookie() string {
 	return string(b)
 }
 
-func fetchBackendMetadata[T TrafficType](t T) ([]string, error) {
-	url := fmt.Sprintf("%s/backends/%v", *discoveryURL, t)
+func fetchBackendMetadata[T TrafficType](uri string, t T) ([]string, error) {
+	url := fmt.Sprintf("%s/backends/%v", uri, t)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -139,19 +128,19 @@ func filterBackendsByType(types []TrafficType, backends []HAProxyBackendConfig) 
 	return result
 }
 
-func generateMBRequests(request RequestConfig, backends []HAProxyBackendConfig) []Request {
+func generateMBRequests(cfg RequestConfig, backends []HAProxyBackendConfig) []Request {
 	var requests []Request
 
 	for _, b := range backends {
 		requests = append(requests, Request{
-			Clients:           request.Clients,
+			Clients:           cfg.Clients,
 			Host:              fmt.Sprintf("%s", b.Name),
-			KeepAliveRequests: request.KeepAliveRequests,
+			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
 			Port:              b.TrafficType.Port(),
 			Scheme:            b.TrafficType.Scheme(),
-			TLSSessionReuse:   *tlsreuse,
+			TLSSessionReuse:   cfg.TLSSessionReuse,
 		})
 	}
 
@@ -166,7 +155,7 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 	var backends []HAProxyBackendConfig
 
 	for _, t := range AllTrafficTypes {
-		metadata, err := fetchBackendMetadata(t)
+		metadata, err := fetchBackendMetadata(p.DiscoveryURL, t)
 		if err != nil {
 			return err
 		}
@@ -218,19 +207,19 @@ func (c *HAProxyGenCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return nil
+	return c.generateMBRequests(p, backends)
 }
 
 func (c *HAProxyGenCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	config := HAProxyGlobalConfig{
 		Globals:   p.Globals,
 		Backends:  backends,
-		HTTPPort:  *httpPort,
-		HTTPSPort: *httpsPort,
-		Maxconn:   *maxconn,
-		Nbthread:  *nbthread,
+		HTTPPort:  c.HTTPPort,
+		HTTPSPort: c.HTTPSPort,
+		Maxconn:   c.Maxconn,
+		Nbthread:  c.Nthreads,
 		OutputDir: p.OutputDir,
-		StatsPort: *statsPort,
+		StatsPort: c.StatsPort,
 	}
 
 	var haproxyConf bytes.Buffer
