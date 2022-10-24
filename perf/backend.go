@@ -40,12 +40,6 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	// log.Printf("%s %v\n", name, l.Addr().(*net.TCPAddr).Port)
 
-	tlsCertFile := tlsTemporaryCertFile()
-	defer os.Remove(tlsCertFile)
-
-	tlsKeyFile := tlsTemporaryKeyFile()
-	defer os.Remove(tlsKeyFile)
-
 	go func() {
 		switch t {
 		case HTTPTraffic, EdgeTraffic:
@@ -53,7 +47,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 				log.Fatal(err)
 			}
 		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(htmlFS)), tlsCertFile, tlsKeyFile); err != nil {
+			if err := http.ServeTLS(l, http.FileServer(http.FS(htmlFS)), p.TLSCert, p.TLSKey); err != nil {
 				log.Fatal(err)
 			}
 		}

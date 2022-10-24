@@ -18,8 +18,8 @@ type Globals struct {
 	OutputDir    string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
 	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
 	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"ca.pem" type:"path"`
-	TLSCert      string      `help:"Path to TLS certificate file" default:"cert.pem" type:"path"`
-	TLSKey       string      `help:"Path to TLS key file" default:"key.pem" type:"path"`
+	TLSCert      string      `help:"Path to TLS certificate file" default:"tls.crt" type:"path"`
+	TLSKey       string      `help:"Path to TLS key file" default:"tls.key" type:"path"`
 	Version      VersionFlag `help:"Print version information and quit."`
 }
 

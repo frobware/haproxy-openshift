@@ -32,11 +32,11 @@ var (
 	//go:embed *.html
 	htmlFS embed.FS
 
-	//go:embed tls.crt
-	tlsCert string
+	// //go:embed tls.crt
+	// tlsCert string
 
-	//go:embed tls.key
-	tlsKey string
+	// //go:embed tls.key
+	// tlsKey string
 )
 
 func mustCreateTemporaryFile(data []byte) string {
@@ -52,14 +52,6 @@ func mustCreateTemporaryFile(data []byte) string {
 		log.Fatal(err)
 	}
 	return f.Name()
-}
-
-func tlsTemporaryKeyFile() string {
-	return mustCreateTemporaryFile([]byte(tlsKey))
-}
-
-func tlsTemporaryCertFile() string {
-	return mustCreateTemporaryFile([]byte(tlsCert))
 }
 
 func mustResolveCurrentHost() string {
