@@ -2,7 +2,9 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
+	"net"
 	"os"
 	"strconv"
 
@@ -19,6 +21,10 @@ type BoundBackend struct {
 	Backend
 
 	Port int `json:"port"`
+}
+
+func (b BoundBackend) URL() string {
+	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
 }
 
 type BackendsByTrafficType map[termination.TrafficType][]Backend
@@ -73,5 +79,17 @@ func mustResolveCurrentHost() string {
 	if err != nil {
 		log.Fatal(err)
 	}
+	net.LookupIP(hostname)
 	return hostname
+}
+
+// TODO fix me
+func getOutboundIPAddr() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP
 }

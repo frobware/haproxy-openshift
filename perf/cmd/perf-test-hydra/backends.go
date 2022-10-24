@@ -125,7 +125,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	log.Printf("starting %d processes\n", len(backendsByTrafficType)*p.Backends)
+	log.Printf("starting %d backends\n", len(backendsByTrafficType)*p.Backends)
 
 	for t, backends := range backendsByTrafficType {
 		for _, backend := range backends {
@@ -153,7 +153,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	}
 
 	<-backendsReady
-	log.Printf("metadata server running; pid: %d, ppid: %d, args: %s", os.Getpid(), os.Getppid(), os.Args)
+	log.Printf("metadata server running at http://%s:%v/backends\n", hostIPAddr, p.Port)
 	<-p.Context.Done()
 	return nil
 }
