@@ -82,19 +82,19 @@ const (
 	HTTPRedirectMapName     = "os_route_http_redirect.map"
 )
 
-//go:embed globals.tmpl
+//go:embed haproxy/globals.tmpl
 var globalTemplate string
 
-//go:embed defaults.tmpl
+//go:embed haproxy/defaults.tmpl
 var defaultTemplate string
 
-//go:embed backends.tmpl
+//go:embed haproxy/backends.tmpl
 var backendTemplate string
 
-//go:embed error-page-404.http
+//go:embed haproxy/error-page-404.http
 var error404 string
 
-//go:embed error-page-503.http
+//go:embed haproxy/error-page-503.http
 var error503 string
 
 var (
