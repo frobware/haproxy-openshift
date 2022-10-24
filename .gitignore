@@ -4,3 +4,4 @@
 /perf/perf-test-hydra
 /perf/cmd/perf-test-hydra/commit.txt
 *.pem
+/perf/certs/
