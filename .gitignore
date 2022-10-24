@@ -6,3 +6,4 @@
 *.pem
 /perf/certs/
 tls.*
+/perf/perf

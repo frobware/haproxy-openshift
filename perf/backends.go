@@ -12,8 +12,6 @@ import (
 	"syscall"
 )
 
-type ServeBackendsCmd struct{}
-
 const (
 	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
 	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"

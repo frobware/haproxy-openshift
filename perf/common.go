@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"embed"
 	"fmt"
 	"io"
 	"log"
@@ -29,17 +28,6 @@ func (b BoundBackend) URL() string {
 }
 
 type BackendsByTrafficType map[TrafficType][]Backend
-
-var (
-	//go:embed *.html
-	htmlFS embed.FS
-
-	// //go:embed tls.crt
-	// tlsCert string
-
-	// //go:embed tls.key
-	// tlsKey string
-)
 
 func mustCreateTemporaryFile(data []byte) string {
 	f, err := os.CreateTemp("", strconv.Itoa(os.Getpid()))

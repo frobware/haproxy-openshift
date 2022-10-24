@@ -5,14 +5,14 @@ import (
 	"os/exec"
 )
 
-type MakeCertsCmd struct {
-	Regenerate bool `default:"false" short:"r"`
+func (c *MakeCertsCmd) Run(p *ProgramCtx) error {
+	return generateCerts(p, c.Regenerate)
 }
 
-func (c *MakeCertsCmd) Run(p *ProgramCtx) error {
+func generateCerts(p *ProgramCtx, regenerate bool) error {
 	log.Printf("generating certs using %q\n", p.MkCert)
 	args := "no-op"
-	if c.Regenerate {
+	if regenerate {
 		args = "-r"
 	}
 	out, err := exec.Command(p.MkCert, args).CombinedOutput()

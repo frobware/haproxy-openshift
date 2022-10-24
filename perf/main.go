@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -33,7 +34,7 @@ type CLI struct {
 	PrintHosts    PrintHostsCmd    `cmd:"" help:"Print backend hostnames (/etc/hosts compatible)."`
 	ServeBackend  ServeBackendCmd  `cmd:"" help:"Serve backend." hidden:"true"`
 	ServeBackends ServeBackendsCmd `cmd:"" help:"Serve backends."`
-	Version       VersionCmd       `cmd:"" help:"Print the version information."`
+	Version       VersionCmd       `cmd:"" help:"Print version information and quit."`
 }
 
 type ProgramCtx struct {
@@ -75,6 +76,12 @@ func main() {
 		}
 		os.Exit(0)
 	}()
+
+	if _, err := os.Stat(cli.Globals.Certificate); errors.Is(err, os.ErrNotExist) {
+		if err := generateCerts(&ProgramCtx{Globals: cli.Globals, Context: ctx}, true); err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	ktx.FatalIfErrorf(ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: ctx}))
 }

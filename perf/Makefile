@@ -1,10 +1,8 @@
-GO_FILES := $(wildcard ./*.go)
-
-# run:
-# 	CGOENABLED=0 go run ./cmd/perf-test-hydra/main.go $(filter-out main.go,$(GO_FILES))
+CGOENABLED=1
+export CGOENABLED
 
 perf-test-hydra: gen fmt vet tidy
-	CGOENABLED=1 go build -o $@ $(GO_FILES)
+	go build -race -o $@ ./...
 
 gen:
 	@go generate ./...

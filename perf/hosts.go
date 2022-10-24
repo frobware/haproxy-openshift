@@ -5,10 +5,6 @@ import (
 	"net"
 )
 
-type PrintHostsCmd struct {
-	Domain string `short:"d" default:"localdomain"`
-}
-
 func (c *PrintHostsCmd) Run(p *ProgramCtx) error {
 	for _, t := range etcHosts(p, getOutboundIPAddr(), c.Domain) {
 		fmt.Println(t)

@@ -6,8 +6,6 @@ import (
 	"github.com/alecthomas/kong"
 )
 
-type VersionCmd struct{}
-
 type VersionFlag string
 
 func (v VersionFlag) Decode(ctx *kong.DecodeContext) error {

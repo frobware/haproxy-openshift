@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -14,9 +15,8 @@ import (
 	"github.com/erikdubbelboer/gspt"
 )
 
-type ServeBackendCmd struct {
-	Args []string `arg:""`
-}
+//go:embed *.html
+var BackendFS embed.FS
 
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	backendName, found := os.LookupEnv(ChildBackendEnvName)
@@ -43,11 +43,11 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	go func() {
 		switch t {
 		case HTTPTraffic, EdgeTraffic:
-			if err := http.Serve(l, http.FileServer(http.FS(htmlFS))); err != nil {
+			if err := http.Serve(l, http.FileServer(http.FS(BackendFS))); err != nil {
 				log.Fatal(err)
 			}
 		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(htmlFS)), p.TLSCert, p.TLSKey); err != nil {
+			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), p.TLSCert, p.TLSKey); err != nil {
 				log.Fatal(err)
 			}
 		}
