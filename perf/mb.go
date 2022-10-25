@@ -59,7 +59,7 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	for _, clients := range []int64{100} {
+	for _, clients := range []int64{1, 10, 50, 100, 200} {
 		for _, scenario := range []struct {
 			Name         string
 			TrafficTypes []TrafficType
@@ -70,7 +70,7 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 			{"passthrough", []TrafficType{PassthroughTraffic}},
 			{"reencrypt", []TrafficType{ReencryptTraffic}},
 		} {
-			for _, keepAliveRequests := range []int64{0, 50} {
+			for _, keepAliveRequests := range []int64{0} {
 				config := RequestConfig{
 					Clients:           clients,
 					KeepAliveRequests: keepAliveRequests,
