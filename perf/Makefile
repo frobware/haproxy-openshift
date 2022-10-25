@@ -1,6 +1,9 @@
 CGOENABLED=1
 export CGOENABLED
 
+GOFLAGS=-mod=vendor
+export GOFLAGS
+
 perf-test-hydra: gen fmt vet tidy
 	go build -o $@ ./...
 
