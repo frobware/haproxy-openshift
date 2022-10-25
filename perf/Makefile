@@ -1,21 +1,21 @@
-GO ?= GO111MODULE=auto GOFLAGS=-mod=vendor go
+GO ?= CGO_ENABLED=1 GO111MODULE=on GOFLAGS=-mod=vendor go
 
-perf-test-hydra: gen fmt vet vendor tidy
-	CGOENABLED=1 $(GO) build -x -o $@ ./...
+perf-test-hydra: generate fmt vet vendor tidy
+	$(GO) build -o $@ ./...
 
-gen:
-	$(GO) generate ./...
+generate:
+	@$(GO) generate ./...
 
 fmt:
-	$(GO) fmt ./...
+	@$(GO) fmt ./...
 
 vet:
-	$(GO) vet ./...
+	@$(GO) vet ./...
 
 vendor:
-	$(GO) mod vendor
+	@$(GO) mod vendor
 
 tidy:
-	$(GO) mod tidy
+	@$(GO) mod tidy
 
-.PHONY: perf-test-hydra gen fmt vet vendor tidy
+.PHONY: generate fmt vet vendor tidy
