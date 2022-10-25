@@ -23,13 +23,14 @@ type RequestConfig struct {
 type HAProxyGlobalConfig struct {
 	Globals
 
-	Backends  []HAProxyBackendConfig
-	HTTPPort  int
-	HTTPSPort int
-	Maxconn   int
-	Nbthread  int
-	OutputDir string
-	StatsPort int
+	Backends             []HAProxyBackendConfig
+	HTTPPort             int
+	HTTPSPort            int
+	Maxconn              int
+	Nbthread             int
+	OutputDir            string
+	StatsPort            int
+	UseUnixDomainSockets bool
 }
 
 type HAProxyBackendConfig struct {
@@ -148,14 +149,15 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	config := HAProxyGlobalConfig{
-		Globals:   p.Globals,
-		Backends:  backends,
-		HTTPPort:  c.HTTPPort,
-		HTTPSPort: c.HTTPSPort,
-		Maxconn:   c.Maxconn,
-		Nbthread:  c.Nthreads,
-		OutputDir: p.OutputDir,
-		StatsPort: c.StatsPort,
+		Globals:              p.Globals,
+		Backends:             backends,
+		HTTPPort:             c.HTTPPort,
+		HTTPSPort:            c.HTTPSPort,
+		Maxconn:              c.Maxconn,
+		Nbthread:             c.Nthreads,
+		OutputDir:            p.OutputDir,
+		StatsPort:            c.StatsPort,
+		UseUnixDomainSockets: c.UseUnixDomainSockets,
 	}
 
 	var haproxyConf bytes.Buffer
