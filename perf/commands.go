@@ -17,6 +17,10 @@ type GenHostsCmd struct {
 	Domain string `short:"d" default:"localdomain"`
 }
 
+type GenWorkloadCmd struct {
+	TLSReuse bool `default:"true"`
+}
+
 type ServeBackendsCmd struct{}
 
 type ServeBackendCmd struct {

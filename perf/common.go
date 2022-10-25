@@ -21,6 +21,7 @@ type BoundBackend struct {
 }
 
 type BackendsByTrafficType map[TrafficType][]Backend
+type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
 func (b BoundBackend) URL() string {
 	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
