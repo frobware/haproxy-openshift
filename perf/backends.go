@@ -116,13 +116,13 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 }
 
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
-	hostIPAddr := mustResolveCurrentHost()
+	hostIPAddr := HostIPAddress()
 	backendsByTrafficType := BackendsByTrafficType{}
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
 			backend := Backend{
-				HostAddr:    hostIPAddr,
+				HostAddr:    hostIPAddr.String(),
 				Name:        fmt.Sprintf("%s-%v-%v", p.HostPrefix, t, i),
 				TrafficType: t,
 			}
@@ -189,7 +189,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	<-backendsReady
 	log.Printf("%d backends registered", backendsRegistered)
-	log.Printf("metadata server running at http://%s:%v/backends\n", hostIPAddr, p.Port)
+	log.Printf("metadata server running at http://%s:%v/backends\n", Hostname(), p.Port)
 	<-p.Context.Done()
 	return nil
 }

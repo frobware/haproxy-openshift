@@ -30,7 +30,7 @@ func (b BoundBackend) URL() string {
 	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
 }
 
-func mustResolveCurrentHost() string {
+func Hostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
@@ -40,10 +40,10 @@ func mustResolveCurrentHost() string {
 }
 
 // TODO; we want anything but 127.0.0.1 || ::1 returned.
-func getOutboundIPAddr() net.IP {
+func HostIPAddress() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)

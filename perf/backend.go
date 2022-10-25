@@ -53,7 +53,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	boundBackend := BoundBackend{
 		Backend: Backend{
-			HostAddr:    "127.0.0.1",
+			HostAddr:    HostIPAddress().String(),
 			Name:        backendName,
 			TrafficType: t,
 		},

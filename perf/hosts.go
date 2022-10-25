@@ -6,7 +6,7 @@ import (
 )
 
 func (c *GenHostsCmd) Run(p *ProgramCtx) error {
-	for _, t := range etcHosts(p, getOutboundIPAddr(), c.Domain) {
+	for _, t := range etcHosts(p, HostIPAddress(), c.Domain) {
 		fmt.Println(t)
 	}
 
