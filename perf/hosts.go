@@ -19,8 +19,7 @@ func etcHosts(p *ProgramCtx, ipAddr net.IP, domain string) []string {
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
 			hostname := fmt.Sprintf("%v-%v-%v", p.HostPrefix, t, i)
-			hostnameFQ := hostname + "." + domain
-			names = append(names, fmt.Sprintf("%v %v %v", ipAddr, hostnameFQ, hostname))
+			names = append(names, fmt.Sprintf("%v %v.%v %v", ipAddr, hostname, domain, hostname))
 		}
 	}
 
