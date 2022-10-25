@@ -62,7 +62,7 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 		if _, ok := r.URL.Query()["json"]; ok {
 			var boundBackendsByTrafficType = BoundBackendsByTrafficType{}
 
-			for _, t := range AllTrafficTypes[:] {
+			for _, t := range AllTrafficTypes {
 				for _, b := range backendsByTrafficType[t] {
 					port, ok := registeredBackends.Load(b.Name)
 					if !ok {
@@ -85,7 +85,7 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 				return
 			}
 		} else {
-			for _, t := range AllTrafficTypes[:] {
+			for _, t := range AllTrafficTypes {
 				printBackendsForType(w, t)
 			}
 		}
