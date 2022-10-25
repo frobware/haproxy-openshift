@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -61,4 +64,25 @@ func createFile(path string, data []byte) error {
 		return err
 	}
 	return f.Close()
+}
+
+func fetchAllBackendMetadata(uri string) (BoundBackendsByTrafficType, error) {
+	url := fmt.Sprintf("%s/backends?json=1", uri)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		var backendsByType BoundBackendsByTrafficType
+		if err := json.Unmarshal(body, &backendsByType); err != nil {
+			return nil, err
+		}
+		return backendsByType, nil
+	}
+	return nil, fmt.Errorf("request failed %v", resp.StatusCode)
 }

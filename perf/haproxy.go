@@ -7,10 +7,8 @@ import (
 	"html/template"
 	"io"
 	"math/rand"
-	"net"
 	"os"
 	"path"
-	"strings"
 )
 
 type Backends map[string]Backend
@@ -92,32 +90,21 @@ func filterBackendsByType(types []TrafficType, backends []HAProxyBackendConfig) 
 }
 
 func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
-	if err := os.RemoveAll(p.OutputDir); err != nil {
+	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
+	if err != nil {
 		return err
 	}
 
-	var backends []HAProxyBackendConfig
+	var proxyBackends []HAProxyBackendConfig
 
-	for _, t := range AllTrafficTypes {
-		metadata, err := fetchBackendMetadata(p.DiscoveryURL, t)
-		if err != nil {
-			return err
-		}
-		for i := range metadata {
-			words := strings.Split(metadata[i], " ")
-			if len(words) < 3 {
-				return fmt.Errorf("not enough words in %q", metadata[i])
-			}
-			addrs, err := net.LookupIP(words[0])
-			if err != nil {
-				return err
-			}
-			backends = append(backends, HAProxyBackendConfig{
+	for t, backends := range backendsByTrafficType {
+		for _, b := range backends {
+			proxyBackends = append(proxyBackends, HAProxyBackendConfig{
 				BackendCookie: cookie(),
-				HostAddr:      addrs[0].String(),
-				Name:          words[1],
+				HostAddr:      b.HostAddr,
+				Name:          b.Name,
 				OutputDir:     p.OutputDir,
-				Port:          words[2],
+				Port:          fmt.Sprintf("%v", b.Port),
 				ServerCookie:  cookie(),
 				TLSCACert:     p.TLSCACert,
 				TrafficType:   t,
@@ -125,11 +112,11 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	if err := os.MkdirAll(path.Join(p.OutputDir, "run"), 0755); err != nil {
+	if err := os.RemoveAll(p.OutputDir); err != nil {
 		return err
 	}
 
-	// create known paths that need to exist.
+	// create all known paths that need to exist.
 	for _, dirPath := range [][]string{
 		{"conf"},
 		{"log"},
@@ -143,15 +130,15 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	if err := c.generateMainConfig(p, backends); err != nil {
+	if err := c.generateMainConfig(p, proxyBackends); err != nil {
 		return err
 	}
 
-	if err := c.generateMapFiles(p, backends); err != nil {
+	if err := c.generateMapFiles(p, proxyBackends); err != nil {
 		return err
 	}
 
-	if err := c.generateCertConfig(p, backends); err != nil {
+	if err := c.generateCertConfig(p, proxyBackends); err != nil {
 		return err
 	}
 
