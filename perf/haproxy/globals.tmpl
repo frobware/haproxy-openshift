@@ -1,7 +1,9 @@
 global
   log stdout format raw local0
 
+  {{ if ne 0 .Maxconn -}}
   maxconn {{.Maxconn}}
+  {{ end -}}
   nbthread {{.Nbthread}}
 
   # daemon
