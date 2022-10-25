@@ -12,7 +12,7 @@ import (
 )
 
 type Globals struct {
-	Certificate  string      `help:"Path to certificate" default:"certs/full-chain.pem" type:"path"`
+	Certificate  string      `help:"Path to certificate" default:"certs/domain.pem" type:"path"`
 	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
 	DiscoveryURL string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
 	HostPrefix   string      `help:"Hostname prefix" default:"perf-test-hydra"`

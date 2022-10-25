@@ -335,7 +335,7 @@ func (c *GenProxyConfigCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBa
 func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
 	var certConfigMap bytes.Buffer
 
-	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
+	for _, b := range filterBackendsByType([]TrafficType{EdgeTraffic, ReencryptTraffic}, backends) {
 		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name)); err != nil {
 			return err
 		}
@@ -345,7 +345,7 @@ func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxy
 }
 
 func (c *GenProxyConfigCmd) generateMBRequests(p *ProgramCtx, backends []HAProxyBackendConfig) error {
-	for _, clients := range []int64{1, 50, 100, 200} {
+	for _, clients := range []int64{100} {
 		for _, scenario := range []struct {
 			Name         string
 			TrafficTypes []TrafficType
@@ -356,7 +356,7 @@ func (c *GenProxyConfigCmd) generateMBRequests(p *ProgramCtx, backends []HAProxy
 			{"passthrough", []TrafficType{PassthroughTraffic}},
 			{"reencrypt", []TrafficType{ReencryptTraffic}},
 		} {
-			for _, keepAliveRequests := range []int64{0, 1, 50} {
+			for _, keepAliveRequests := range []int64{0, 50} {
 				config := RequestConfig{
 					Clients:           clients,
 					KeepAliveRequests: keepAliveRequests,

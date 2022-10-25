@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os/exec"
+	"strings"
 )
 
 func (c *GenCertsCmd) Run(p *ProgramCtx) error {
@@ -19,7 +20,10 @@ func generateCerts(p *ProgramCtx, regenerate bool) error {
 	if err != nil {
 		log.Println(string(out), err)
 	} else {
-		log.Println(string(out))
+		s := strings.TrimSuffix(string(out), "\n")
+		if s != "" {
+			log.Println(s)
+		}
 	}
 	return err
 }

@@ -30,13 +30,14 @@ done
 # reset positional arguments
 eval set -- "$PARAMS"
 
-if [[ -f "$certdir/full-chain.pem" ]] && [[ $regenerate -eq 0 ]]; then
+if [[ -f "$certdir/domain.pem" ]] && [[ $regenerate -eq 0 ]]; then
     exit 0
 fi
 
 export CAROOT="$certdir"
 
 mkdir -p "$certdir"
+
 mkcert \
     -client \
     -cert-file "$certdir/tls.crt" \
@@ -48,5 +49,5 @@ mkcert \
     127.0.0.1 \
     ::1
 
-cat "$certdir/rootCA-key.pem" "$certdir/rootCA.pem" "${certdir}/tls.key" "${certdir}/tls.crt" > "$certdir/full-chain.pem"
+cat "${certdir}/tls.crt" "${certdir}/tls.key" "${certdir}/rootCA.pem" > "$certdir/domain.pem"
 ls -lR $certdir
