@@ -336,7 +336,9 @@ func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxy
 	var certConfigMap bytes.Buffer
 
 	for _, b := range filterBackendsByType([]TrafficType{ReencryptTraffic}, backends) {
-		mustWriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name))
+		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name)); err != nil {
+			return err
+		}
 	}
 
 	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfigMap.Bytes())

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 type Backend struct {
@@ -23,31 +20,10 @@ type BoundBackend struct {
 	Port int `json:"port"`
 }
 
-func (b BoundBackend) URL() string {
-	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
-}
-
 type BackendsByTrafficType map[TrafficType][]Backend
 
-func mustCreateTemporaryFile(data []byte) string {
-	f, err := os.CreateTemp("", strconv.Itoa(os.Getpid()))
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, err = f.Write(data)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
-	return f.Name()
-}
-
-func mustWriteString(b *bytes.Buffer, s string) {
-	if _, err := io.WriteString(b, s); err != nil {
-		panic(err)
-	}
+func (b BoundBackend) URL() string {
+	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
 }
 
 func mustResolveCurrentHost() string {
@@ -59,7 +35,7 @@ func mustResolveCurrentHost() string {
 	return hostname
 }
 
-// TODO fix me; we want anything but localhost returned.
+// TODO; we want anything but 127.0.0.1 || ::1 returned.
 func getOutboundIPAddr() net.IP {
 	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
