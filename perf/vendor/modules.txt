@@ -1,0 +1,6 @@
+# github.com/alecthomas/kong v0.6.1
+## explicit; go 1.13
+github.com/alecthomas/kong
+# github.com/erikdubbelboer/gspt v0.0.0-20210805194459-ce36a5128377
+## explicit
+github.com/erikdubbelboer/gspt
