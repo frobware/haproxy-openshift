@@ -16,4 +16,4 @@ vet:
 tidy:
 	@go mod tidy
 
-.PHONY: run perf-test-hydra gen fmt vet
+.PHONY: perf-test-hydra gen fmt vet tidy
