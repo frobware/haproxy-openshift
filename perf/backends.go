@@ -59,8 +59,34 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
-		for _, t := range AllTrafficTypes[:] {
-			printBackendsForType(w, t)
+		var backends []BoundBackend
+
+		if _, ok := r.URL.Query()["json"]; ok {
+			for _, t := range AllTrafficTypes[:] {
+				for _, b := range backendsByTrafficType[t] {
+					port, ok := registeredBackends.Load(b.Name)
+					if !ok {
+						panic("missing port for" + b.Name)
+					}
+					backends = append(backends, BoundBackend{
+						Backend: b,
+						Port:    port.(int),
+					})
+				}
+			}
+			data, err := json.MarshalIndent(backends, "", "  ")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, err := io.WriteString(w, string(data)); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		} else {
+			for _, t := range AllTrafficTypes[:] {
+				printBackendsForType(w, t)
+			}
 		}
 	})
 
