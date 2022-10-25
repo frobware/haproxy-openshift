@@ -1,22 +1,21 @@
-CGOENABLED=1
-export CGOENABLED
+GO ?= GO111MODULE=auto GOFLAGS=-mod=vendor go
 
-GOFLAGS=-mod=vendor
-export GOFLAGS
-
-perf-test-hydra: gen fmt vet tidy
-	go build -o $@ ./...
+perf-test-hydra: gen fmt vet vendor tidy
+	CGOENABLED=1 $(GO) build -x -o $@ ./...
 
 gen:
-	@go generate ./...
+	$(GO) generate ./...
 
 fmt:
-	@go fmt ./...
+	$(GO) fmt ./...
 
 vet:
-	@go vet ./...
+	$(GO) vet ./...
+
+vendor:
+	$(GO) mod vendor
 
 tidy:
-	@go mod tidy
+	$(GO) mod tidy
 
-.PHONY: perf-test-hydra gen fmt vet tidy
+.PHONY: perf-test-hydra gen fmt vet vendor tidy
