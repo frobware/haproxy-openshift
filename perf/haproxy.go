@@ -143,8 +143,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return nil
-	//return c.generateMBRequests(p, backends)
+	return (&GenWorkloadCmd{}).Run(p)
 }
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
