@@ -5,7 +5,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -31,7 +31,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), backendName))
 
-	var t TrafficType = ParseTrafficType(trafficType)
+	var t = ParseTrafficType(trafficType)
 
 	l, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
@@ -67,7 +67,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	var (
 		resp    *http.Response
-		retries int = 17
+		retries = 17
 	)
 
 	for retries > 0 {
@@ -84,11 +84,13 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("POST failed for %+v: %v\n", boundBackend, err)
 	}
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
 	}
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -35,17 +35,18 @@ func Hostname() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	net.LookupIP(hostname)
 	return hostname
 }
 
-// TODO; we want anything but 127.0.0.1 || ::1 returned.
 func HostIPAddress() net.IP {
+	// TODO; we want anything but 127.0.0.1 || ::1 returned.
 	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	defer func(conn net.Conn) {
+		_ = conn.Close()
+	}(conn)
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP
 }
@@ -72,9 +73,11 @@ func fetchAllBackendMetadata(uri string) (BoundBackendsByTrafficType, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 	if resp.StatusCode == http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}

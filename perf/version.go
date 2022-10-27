@@ -8,7 +8,7 @@ import (
 
 type VersionFlag string
 
-func (v VersionFlag) Decode(ctx *kong.DecodeContext) error {
+func (v VersionFlag) Decode(*kong.DecodeContext) error {
 	return nil
 }
 

@@ -11,8 +11,6 @@ import (
 	"path"
 )
 
-type Backends map[string]Backend
-
 type RequestConfig struct {
 	Clients           int64
 	KeepAliveRequests int64

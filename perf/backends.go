@@ -86,29 +86,36 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 			}
 		} else {
 			for _, t := range AllTrafficTypes {
-				printBackendsForType(w, t)
+				if err := printBackendsForType(w, t); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+				}
 			}
 		}
 	})
 
 	mux.HandleFunc("/backends/edge", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, EdgeTraffic)
+		if err := printBackendsForType(w, EdgeTraffic); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 	})
 
 	mux.HandleFunc("/backends/http", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, HTTPTraffic)
+		if err := printBackendsForType(w, HTTPTraffic); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 	})
 
 	mux.HandleFunc("/backends/passthrough", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, PassthroughTraffic)
+		if err := printBackendsForType(w, PassthroughTraffic); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 	})
 
 	mux.HandleFunc("/backends/reencrypt", func(w http.ResponseWriter, r *http.Request) {
-		printBackendsForType(w, ReencryptTraffic)
+		if err := printBackendsForType(w, ReencryptTraffic); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
 	})
-
-	go func() {
-	}()
 
 	if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", port), mux); err != nil {
 		log.Fatal(err)
@@ -144,8 +151,12 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	defer r.Close()
-	defer w.Close()
+	defer func(r *os.File) {
+		_ = r.Close()
+	}(r)
+	defer func(w *os.File) {
+		_ = w.Close()
+	}(w)
 
 	var backendsReady = make(chan bool)
 	var backendsRegistered = 0
