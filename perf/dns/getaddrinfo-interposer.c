@@ -57,46 +57,6 @@ static int str_starts_with(const char *restrict string, const char *restrict pre
 	return 1;
 }
 
-static void print_v4_addr(in_addr_t ipv4_addr)
-{
-	char addrbuf[INET_ADDRSTRLEN + 1];
-	const char *addr;
-	addr = inet_ntop(AF_INET, &ipv4_addr, addrbuf, sizeof addrbuf);
-	if (addr == NULL) {
-		fprintf(stderr, "IPv4 %s\n", strerror(errno));
-		abort();
-	}
-	fprintf(stderr, "IPv4: %s\n", addr);
-}
-
-static void print_addrinfo(struct addrinfo *list)
-{
-	struct addrinfo *curr;
-
-	for (curr = list; curr != NULL; curr = curr->ai_next) {
-		fprintf(stderr, "curr = %p, next = %p, addrlen = %ld, flags = %d, protocol = %d, family = %d, socktype = %d ", curr, curr->ai_next, (long)curr->ai_addrlen, curr->ai_flags, curr->ai_protocol, curr->ai_family, curr->ai_socktype);
-		if (curr->ai_family == AF_INET) {
-			char addrbuf[INET_ADDRSTRLEN + 1];
-			const char *addr;
-			addr = inet_ntop(AF_INET, &(((struct sockaddr_in *)curr->ai_addr)->sin_addr), addrbuf, sizeof addrbuf);
-			if (addr == NULL) {
-				fprintf(stderr, "IPv4 %s\n", strerror(errno));
-				abort();
-			}
-			fprintf(stderr, "IPv4: %s\n", addr);
-		} else if (curr->ai_family == AF_INET6) {
-			char addrbuf[INET6_ADDRSTRLEN + 1];
-			const char *addr;
-			addr = inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)curr->ai_addr)->sin6_addr), addrbuf, sizeof addrbuf);
-			if (addr == NULL) {
-				fprintf(stderr, "IPv6 %s.\n", strerror(errno));
-				abort();
-			}
-			fprintf(stderr, "IPv6: %s\n", addr);
-		}
-	}
-}
-
 /* libc interposer */
 int getaddrinfo(const char *node,
 		const char *service,
