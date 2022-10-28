@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	ChildBackendListenAddress      = "CHILD_BACKEND_LISEN_ADDRESS"
 	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
 	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
 )
@@ -54,7 +55,7 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		registeredBackends.Store(x.Name, x.Port)
+		registeredBackends.Store(x.Name, x)
 		postNotifier(x)
 	})
 
@@ -64,14 +65,16 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 
 			for _, t := range AllTrafficTypes {
 				for _, b := range backendsByTrafficType[t] {
-					port, ok := registeredBackends.Load(b.Name)
+					x, ok := registeredBackends.Load(b.Name)
 					if !ok {
 						panic("missing port for" + b.Name)
 					}
+					boundBackend := x.(BoundBackend)
 					boundBackendsByTrafficType[t] = append(boundBackendsByTrafficType[t],
 						BoundBackend{
-							Backend: b,
-							Port:    port.(int),
+							Backend:       b,
+							Port:          boundBackend.Port,
+							ListenAddress: boundBackend.ListenAddress,
 						})
 				}
 			}
@@ -137,7 +140,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	log.SetPrefix(fmt.Sprintf("[P %v] ", os.Getpid()))
+	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), HostIPAddress()))
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
@@ -177,6 +180,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		for _, backend := range backends {
 			childEnv := []string{
 				fmt.Sprintf("%s=%v", ChildBackendEnvName, backend.Name),
+				fmt.Sprintf("%s=%v", ChildBackendListenAddress, c.ListenAddress),
 				fmt.Sprintf("%s=%v", ChildBackendTrafficTypeEnvName, t),
 			}
 			// We want to be a child of the current
@@ -188,7 +192,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 			// (plural). Otherwise we'll end up back here.
 			newArgs := os.Args[:1]
 			newArgs = append(newArgs, "serve-backend")
-			args := append(newArgs, fmt.Sprintf("#%v", backend.Name))
+			args := append(newArgs, fmt.Sprintf("#%v %v", backend.Name, c.ListenAddress))
 			if _, err := syscall.ForkExec(args[0], args, &syscall.ProcAttr{
 				Env:   append(os.Environ(), childEnv...),
 				Files: []uintptr{0, 1, 2, r.Fd()},

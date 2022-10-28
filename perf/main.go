@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -18,7 +17,7 @@ type Globals struct {
 	HostPrefix   string      `help:"Hostname prefix" default:"perf-test-hydra"`
 	MkCert       string      `help:"Path to mkcert script" default:"mkcert.bash" type:"path"`
 	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
-	OutputDir    string      `help:"Output directory" short:"o" default:"/tmp/perf-test-hydra"`
+	OutputDir    string      `help:"Configuration output directory" short:"o" default:"testrun"`
 	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
 	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"certs/rootCA.pem" type:"path"`
 	TLSCert      string      `help:"Path to TLS certificate file" default:"certs/tls.crt" type:"path"`
@@ -78,11 +77,15 @@ func main() {
 		os.Exit(0)
 	}()
 
-	if _, err := os.Stat(cli.Globals.Certificate); errors.Is(err, os.ErrNotExist) {
-		if err := generateCerts(&ProgramCtx{Globals: cli.Globals, Context: ctx}, true); err != nil {
-			log.Fatal(err)
-		}
+	if v, ok := os.LookupEnv("DISCOVERY_URL"); ok && v != "" {
+		cli.Globals.DiscoveryURL = v
 	}
+
+	// if _, err := os.Stat(cli.Globals.Certificate); errors.Is(err, os.ErrNotExist) {
+	// 	if err := generateCerts(&ProgramCtx{Globals: cli.Globals, Context: ctx}, true); err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// }
 
 	ktx.FatalIfErrorf(ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: ctx}))
 }

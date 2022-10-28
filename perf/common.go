@@ -20,7 +20,8 @@ type Backend struct {
 type BoundBackend struct {
 	Backend
 
-	Port int `json:"port"`
+	ListenAddress string `json:"listen_address"`
+	Port          int    `json:"port"`
 }
 
 type BackendsByTrafficType map[TrafficType][]Backend

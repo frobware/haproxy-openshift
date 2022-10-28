@@ -24,6 +24,7 @@ type HAProxyGlobalConfig struct {
 	Backends             []HAProxyBackendConfig
 	HTTPPort             int
 	HTTPSPort            int
+	ListenAddress        string
 	Maxconn              int
 	Nbthread             int
 	OutputDir            string
@@ -33,7 +34,7 @@ type HAProxyGlobalConfig struct {
 
 type HAProxyBackendConfig struct {
 	BackendCookie string
-	HostAddr      string
+	ListenAddress string
 	Name          string
 	OutputDir     string
 	Port          string
@@ -100,7 +101,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		for _, b := range backends {
 			proxyBackends = append(proxyBackends, HAProxyBackendConfig{
 				BackendCookie: cookie(),
-				HostAddr:      b.HostAddr,
+				ListenAddress: b.ListenAddress,
 				Name:          b.Name,
 				OutputDir:     p.OutputDir,
 				Port:          fmt.Sprintf("%v", b.Port),
@@ -150,6 +151,7 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 		Backends:             backends,
 		HTTPPort:             c.HTTPPort,
 		HTTPSPort:            c.HTTPSPort,
+		ListenAddress:        c.ListenAddress,
 		Maxconn:              c.Maxconn,
 		Nbthread:             c.Nthreads,
 		OutputDir:            p.OutputDir,

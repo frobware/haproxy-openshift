@@ -19,6 +19,11 @@ import (
 var BackendFS embed.FS
 
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
+	listenAddr, found := os.LookupEnv(ChildBackendListenAddress)
+	if !found {
+		return fmt.Errorf("%q not found in environment", ChildBackendListenAddress)
+	}
+
 	backendName, found := os.LookupEnv(ChildBackendEnvName)
 	if !found {
 		return fmt.Errorf("%q not found in environment", ChildBackendEnvName)
@@ -33,7 +38,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	var t = ParseTrafficType(trafficType)
 
-	l, err := net.Listen("tcp", "0.0.0.0:0")
+	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddr))
 	if err != nil {
 		return err
 	}
@@ -57,7 +62,8 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 			Name:        backendName,
 			TrafficType: t,
 		},
-		Port: l.Addr().(*net.TCPAddr).Port,
+		ListenAddress: listenAddr,
+		Port:          l.Addr().(*net.TCPAddr).Port,
 	}
 
 	jsonValue, err := json.Marshal(boundBackend)
@@ -95,7 +101,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	gspt.SetProcTitle(fmt.Sprintf("%s %v", boundBackend.Name, boundBackend.Port))
+	gspt.SetProcTitle(fmt.Sprintf("%s %v %v", boundBackend.Name, listenAddr, boundBackend.Port))
 
 	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
 	os.Exit(2)

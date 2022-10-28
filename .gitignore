@@ -7,3 +7,4 @@
 /perf/certs/
 tls.*
 /perf/perf
+/perf/testrun/
