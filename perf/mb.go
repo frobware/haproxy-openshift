@@ -9,16 +9,15 @@ import (
 )
 
 type Request struct {
-	Clients           int64             `json:"clients"`
-	Delay             Delay             `json:"delay"`
-	Headers           map[string]string `json:"headers"`
-	Host              string            `json:"host"`
-	KeepAliveRequests int64             `json:"keep-alive-requests"`
-	Method            string            `json:"method"`
-	Path              string            `json:"path"`
-	Port              int64             `json:"port"`
-	Scheme            string            `json:"scheme"`
-	TLSSessionReuse   bool              `json:"tls-session-reuse"`
+	Clients           int64  `json:"clients"`
+	Delay             Delay  `json:"delay"`
+	Host              string `json:"host"`
+	KeepAliveRequests int64  `json:"keep-alive-requests"`
+	Method            string `json:"method"`
+	Path              string `json:"path"`
+	Port              int64  `json:"port"`
+	Scheme            string `json:"scheme"`
+	TLSSessionReuse   bool   `json:"tls-session-reuse"`
 }
 
 type Delay struct {
@@ -32,16 +31,13 @@ func (c *GenWorkloadCmd) generateWorkloadRequests(cfg RequestConfig, backends []
 	for _, b := range backends {
 		requests = append(requests, Request{
 			Clients:           cfg.Clients,
-			Host:              c.ProxyAddress,
+			Host:              b.Name,
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
 			Port:              b.TrafficType.Port(),
 			Scheme:            b.TrafficType.Scheme(),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
-			Headers: map[string]string{
-				"Host": b.Name,
-			},
 		})
 	}
 
