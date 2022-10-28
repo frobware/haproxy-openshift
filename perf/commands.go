@@ -20,7 +20,8 @@ type GenHostsCmd struct {
 }
 
 type GenWorkloadCmd struct {
-	TLSReuse bool `default:"true"`
+	ProxyAddress string `default:"127.0.0.1"`
+	TLSReuse     bool   `default:"true"`
 }
 
 type ServeBackendsCmd struct {

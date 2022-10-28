@@ -142,7 +142,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return (&GenWorkloadCmd{}).Run(p)
+	return (&GenWorkloadCmd{ProxyAddress: c.ListenAddress}).Run(p)
 }
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {

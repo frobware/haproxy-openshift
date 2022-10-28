@@ -9,15 +9,16 @@ import (
 )
 
 type Request struct {
-	Clients           int64  `json:"clients"`
-	Delay             Delay  `json:"delay"`
-	Host              string `json:"host"`
-	KeepAliveRequests int64  `json:"keep-alive-requests"`
-	Method            string `json:"method"`
-	Path              string `json:"path"`
-	Port              int64  `json:"port"`
-	Scheme            string `json:"scheme"`
-	TLSSessionReuse   bool   `json:"tls-session-reuse"`
+	Clients           int64             `json:"clients"`
+	Delay             Delay             `json:"delay"`
+	Headers           map[string]string `json:"headers"`
+	Host              string            `json:"host"`
+	KeepAliveRequests int64             `json:"keep-alive-requests"`
+	Method            string            `json:"method"`
+	Path              string            `json:"path"`
+	Port              int64             `json:"port"`
+	Scheme            string            `json:"scheme"`
+	TLSSessionReuse   bool              `json:"tls-session-reuse"`
 }
 
 type Delay struct {
@@ -25,19 +26,22 @@ type Delay struct {
 	Min int64 `json:"min"`
 }
 
-func generateWorkloadRequests(cfg RequestConfig, backends []BoundBackend) []Request {
+func (c *GenWorkloadCmd) generateWorkloadRequests(cfg RequestConfig, backends []BoundBackend) []Request {
 	var requests []Request
 
 	for _, b := range backends {
 		requests = append(requests, Request{
 			Clients:           cfg.Clients,
-			Host:              fmt.Sprintf("%s", b.Name),
+			Host:              c.ProxyAddress,
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
 			Port:              b.TrafficType.Port(),
 			Scheme:            b.TrafficType.Scheme(),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
+			Headers: map[string]string{
+				"Host": b.Name,
+			},
 		})
 	}
 
@@ -81,7 +85,7 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 				TLSSessionReuse:   c.TLSReuse,
 				TrafficTypes:      scenario.TrafficTypes,
 			}
-			requests := generateWorkloadRequests(config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
+			requests := c.generateWorkloadRequests(config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
 			data, err := json.MarshalIndent(requests, "", "  ")
 			if err != nil {
 				return err
