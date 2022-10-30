@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/x509/pkix"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,12 +20,6 @@ const (
 	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
 	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
 )
-
-var CertName = pkix.Name{
-	Organization:       []string{"Perf Cert Company"},
-	OrganizationalUnit: []string{"Software"},
-	CommonName:         "perf",
-}
 
 func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
 	// Provide synchronous access to the asynchronously registered
@@ -213,6 +206,8 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
+	var subjectAltNames = []string{Hostname(), "localhost", "127.0.0.1", "::1"}
+
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
 			backend := Backend{
@@ -221,6 +216,10 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
+			switch t {
+			case EdgeTraffic, ReencryptTraffic:
+				subjectAltNames = append(subjectAltNames, backend.Name)
+			}
 		}
 	}
 
@@ -244,14 +243,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	var backendsReady = make(chan bool)
 	var backendsRegistered = 0
 
-	certBundle, err := CreateTLSCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0),
-		Hostname(),
-		"x1c.localdomain",
-		"*.int.frobware.com",
-		"localhost",
-		"127.0.0.1",
-		"::1")
-
+	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAltNames...)
 	if err != nil {
 		return fmt.Errorf("failed to generate certificates: %v", err)
 	}

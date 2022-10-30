@@ -13,7 +13,7 @@ import (
 )
 
 func TestCertGen(t *testing.T) {
-	certBundle, err := CreateTLSCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0),
+	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0),
 		Hostname(),
 		"localhost",
 		"127.0.0.1",
