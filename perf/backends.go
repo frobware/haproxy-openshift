@@ -216,8 +216,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
-			switch t {
-			case EdgeTraffic, ReencryptTraffic:
+			if t != HTTPTraffic {
 				subjectAltNames = append(subjectAltNames, backend.Name)
 			}
 		}
