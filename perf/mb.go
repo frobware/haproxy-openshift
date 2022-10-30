@@ -86,18 +86,14 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 			if err != nil {
 				return err
 			}
-			filepath := fmt.Sprintf("%s/mb/traffic-%v-backends-%v-clients-%v-keepalives-%v",
+			filepath := fmt.Sprintf("%s/mb/traffic-%v-backends-%v-clients-%v-keepalives-%v-requests.json",
 				p.OutputDir,
 				scenario.Name,
 				len(requests)/len(config.TrafficTypes),
 				config.Clients,
 				config.KeepAliveRequests)
-			if err := os.MkdirAll(filepath, 0755); err != nil {
-				return fmt.Errorf("failed to create %q: %v", filepath, err)
-			}
-			filename := fmt.Sprintf("%s/requests.json", filepath)
-			if err := createFile(filename, data); err != nil {
-				return fmt.Errorf("error generating %s: %v", filename, err)
+			if err := createFile(filepath, data); err != nil {
+				return fmt.Errorf("error generating %s: %v", filepath, err)
 			}
 		}
 	}

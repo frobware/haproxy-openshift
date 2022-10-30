@@ -37,7 +37,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	var t = ParseTrafficType(trafficType)
 
-	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddr))
+	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:0"))
 	if err != nil {
 		return err
 	}

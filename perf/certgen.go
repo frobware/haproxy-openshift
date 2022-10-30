@@ -2,15 +2,16 @@ package main
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"math/big"
 	"net"
+	"os"
+	"os/user"
 	"time"
 )
 
@@ -21,31 +22,19 @@ type CertificateBundle struct {
 	RootCAKeyPEM  string
 }
 
-// MarshalKeyToDERBlock converts the key to a string representation
-// (SEC 1, ASN.1 DER form) suitable for dropping into TLS key.
-func MarshalKeyToDERBlock(key *ecdsa.PrivateKey) ([]byte, error) {
-	data, err := x509.MarshalECPrivateKey(key)
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal private key: %v", err)
+var userAndHostname string
+
+func init() {
+	u, err := user.Current()
+	if err == nil {
+		userAndHostname = u.Username + "@"
 	}
-
-	buf := &bytes.Buffer{}
-	if err := pem.Encode(buf, &pem.Block{Type: "EC PRIVATE KEY", Bytes: data}); err != nil {
-		return nil, err
+	if h, err := os.Hostname(); err == nil {
+		userAndHostname += h
 	}
-
-	return buf.Bytes(), nil
-}
-
-// MarshalCertToPEMBlock encodes derBytes to PEM format.
-func MarshalCertToPEMBlock(derBytes []byte) ([]byte, error) {
-	buf := &bytes.Buffer{}
-
-	if err := pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return nil, fmt.Errorf("failed to encode cert data: %v", err)
+	if err == nil && u.Name != "" && u.Name != u.Username {
+		userAndHostname += " (" + u.Name + ")"
 	}
-
-	return buf.Bytes(), nil
 }
 
 // CreateTLSCerts generates self-signed certificates suitable for
@@ -57,42 +46,59 @@ func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateName
 		return nil, fmt.Errorf("failed to generate serial number: %v", err)
 	}
 
-	rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate ECDSA key: %v", err)
-	}
-
-	rootCA := x509.Certificate{
-		BasicConstraintsValid: true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		NotAfter:              notAfter,
-		NotBefore:             notBefore,
-		SerialNumber:          serialNumber,
-		Subject:               name,
-	}
-
-	rootCAPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key: %v", err)
 	}
 
-	rootCABytes, err := x509.CreateCertificate(rand.Reader, &rootCA, &rootCA, &rootCAPrivateKey.PublicKey, rootCAPrivateKey)
+	ca := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:       []string{"mkcert development certificate"},
+			OrganizationalUnit: []string{userAndHostname},
+			CommonName:         "mkcert " + userAndHostname,
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		IsCA:                  true,
+		KeyUsage:              x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+		MaxPathLenZero:        true,
+		// SubjectKeyId:          []byte{1, 2, 3, 4, 6},
+	}
+
+	caBytes, err := x509.CreateCertificate(rand.Reader, &ca, &ca, &caPrivKey.PublicKey, caPrivKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create rooot certificate: %v\n", err)
 	}
 
+	caPEM := new(bytes.Buffer)
+	pem.Encode(caPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	})
+
+	caPrivKeyPEM := new(bytes.Buffer)
+	pem.Encode(caPrivKeyPEM, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
+	})
+
+	name.CommonName = ""
+
+	// server certificate
 	cert := x509.Certificate{
-		BasicConstraintsValid: true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		IsCA:                  false,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		NotAfter:              notAfter,
-		NotBefore:             notBefore,
-		SerialNumber:          serialNumber,
-		Subject:               name,
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:       []string{"mkcert development certificate"},
+			OrganizationalUnit: []string{userAndHostname},
+		},
+		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		NotBefore:    notBefore,
+		NotAfter:     notAfter,
+		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 	}
 
 	for _, host := range alternateNames {
@@ -103,42 +109,32 @@ func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateName
 		}
 	}
 
-	certPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	certPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate ECDSA key: %v", err)
+		return nil, fmt.Errorf("failed to generate key: %v", err)
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, &cert, &rootCA, &certPrivateKey.PublicKey, rootKey)
+	certBytes, err := x509.CreateCertificate(rand.Reader, &cert, &ca, &certPrivKey.PublicKey, caPrivKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create leaf certificate: %v", err)
 	}
 
-	// convert all keys/certs to PEM format for convenience.
+	certPEM := new(bytes.Buffer)
+	pem.Encode(certPEM, &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	})
 
-	caPEM, err := MarshalCertToPEMBlock(rootCABytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall root certificate: %v", err)
-	}
-
-	caPrivateKeyPEM, err := MarshalKeyToDERBlock(rootKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall root private key: %v", err)
-	}
-
-	leafCertPEM, err := MarshalCertToPEMBlock(certBytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall leaf certificate: %v", err)
-	}
-
-	leafKeyPEM, err := MarshalKeyToDERBlock(certPrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshall leaf private key: %v", err)
-	}
+	certPrivKeyPEM := new(bytes.Buffer)
+	pem.Encode(certPrivKeyPEM, &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
+	})
 
 	return &CertificateBundle{
-		LeafCertPEM:   string(leafCertPEM),
-		LeafKeyPEM:    string(leafKeyPEM),
-		RootCACertPEM: string(caPEM),
-		RootCAKeyPEM:  string(caPrivateKeyPEM),
+		LeafCertPEM:   string(certPEM.String()),
+		LeafKeyPEM:    string(certPrivKeyPEM.String()),
+		RootCACertPEM: string(caPEM.String()),
+		RootCAKeyPEM:  string(caPrivKeyPEM.String()),
 	}, nil
 }

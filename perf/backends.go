@@ -17,14 +17,15 @@ import (
 )
 
 const (
-	ChildBackendListenAddress      = "CHILD_BACKEND_LISEN_ADDRESS"
+	ChildBackendListenAddress      = "CHILD_BACKEND_LISTEN_ADDRESS"
 	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
 	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
 )
 
 var CertName = pkix.Name{
-	Organization: []string{"Cert Gen Company"},
-	CommonName:   "Common Name",
+	Organization:       []string{"Perf Cert Company"},
+	OrganizationalUnit: []string{"Software"},
+	CommonName:         "perf",
 }
 
 func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
@@ -147,18 +148,20 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 }
 
 type CertificatePath struct {
-	DomainFile  string
-	RootCAFile  string
-	TLSCertFile string
-	TLSKeyFile  string
+	DomainFile    string
+	RootCAFile    string
+	RootCAKeyFile string
+	TLSCertFile   string
+	TLSKeyFile    string
 }
 
 func CertificatePaths(certDir string) CertificatePath {
 	return CertificatePath{
-		DomainFile:  path.Join(certDir, "domain.pem"),
-		RootCAFile:  path.Join(certDir, "rootCA.pem"),
-		TLSKeyFile:  path.Join(certDir, "tls.key"),
-		TLSCertFile: path.Join(certDir, "tls.crt"),
+		DomainFile:    path.Join(certDir, "domain.pem"),
+		RootCAFile:    path.Join(certDir, "rootCA.pem"),
+		RootCAKeyFile: path.Join(certDir, "rootCA-key.pem"),
+		TLSKeyFile:    path.Join(certDir, "tls.key"),
+		TLSCertFile:   path.Join(certDir, "tls.crt"),
 	}
 }
 
@@ -171,15 +174,23 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 		return nil, err
 	}
 
-	serverCert := certBundle.LeafCertPEM + "\n" + certBundle.LeafKeyPEM + "\n" + certBundle.RootCACertPEM
-	serverCert = strings.TrimSuffix(serverCert, "\n")
-
 	certPath := CertificatePaths(dir)
 
-	if err := createFile(certPath.DomainFile, []byte(serverCert)); err != nil {
+	domainPEM := strings.Join([]string{
+		strings.TrimSuffix(certBundle.LeafCertPEM, "\n"),
+		strings.TrimSuffix(certBundle.LeafKeyPEM, "\n"),
+		strings.TrimSuffix(certBundle.RootCACertPEM, "\n"),
+	}, "\n")
+
+	if err := createFile(certPath.DomainFile, []byte(strings.TrimSuffix(domainPEM, "\n"))); err != nil {
 		return nil, err
 	}
+
 	if err := createFile(certPath.RootCAFile, []byte(certBundle.RootCACertPEM)); err != nil {
+		return nil, err
+	}
+
+	if err := createFile(certPath.RootCAKeyFile, []byte(certBundle.RootCAKeyPEM)); err != nil {
 		return nil, err
 	}
 
@@ -197,6 +208,10 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	hostIPAddr := HostIPAddress()
 	backendsByTrafficType := BackendsByTrafficType{}
+
+	if err := os.RemoveAll(path.Join(p.OutputDir, "certs")); err != nil {
+		return err
+	}
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
@@ -229,10 +244,21 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	var backendsReady = make(chan bool)
 	var backendsRegistered = 0
 
-	certBundle, err := CreateTLSCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0), Hostname())
+	certBundle, err := CreateTLSCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0),
+		Hostname(),
+		"x1c.localdomain",
+		"*.int.frobware.com",
+		"localhost",
+		"127.0.0.1",
+		"::1")
+
 	if err != nil {
 		return fmt.Errorf("failed to generate certificates: %v", err)
 	}
+
+	// var b []byte = make([]byte, 1)
+	// fmt.Println("write certs")
+	// os.Stdin.Read(b)
 
 	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
 		return err

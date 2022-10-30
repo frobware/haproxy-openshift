@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -75,11 +76,11 @@ func main() {
 		cli.Globals.DiscoveryURL = v
 	}
 
-	// if _, err := os.Stat(cli.Globals.Certificate); errors.Is(err, os.ErrNotExist) {
-	// 	if err := generateCerts(&ProgramCtx{Globals: cli.Globals, Context: ctx}, true); err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// }
+	absPath, err := filepath.Abs(cli.Globals.OutputDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cli.Globals.OutputDir = absPath
 
 	ktx.FatalIfErrorf(ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: ctx}))
 }

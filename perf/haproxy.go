@@ -124,11 +124,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 
 	// wipe and recreate all known paths for haproxy config.
 	for _, dirPath := range [][]string{
-		{"conf"},
-		{"log"},
-		{"router", "cacerts"},
-		{"router", "certs"},
-		{"run"},
+		{"haproxy"},
 	} {
 		paths := path.Join(p.OutputDir, path.Join(dirPath...))
 		if err := os.RemoveAll(paths); err != nil {
@@ -151,7 +147,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return (&GenWorkloadCmd{}).Run(p)
+	return nil
 }
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig, certFile string) error {
@@ -181,15 +177,15 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 		}
 	}
 
-	if err := createFile(path.Join(p.OutputDir, "conf", "haproxy.config"), haproxyConf.Bytes()); err != nil {
+	if err := createFile(path.Join(p.OutputDir, "haproxy", "haproxy.config"), haproxyConf.Bytes()); err != nil {
 		return err
 	}
 
-	if err := createFile(path.Join(p.OutputDir, "conf", "error-page-404.http"), bytes.NewBuffer([]byte(error404)).Bytes()); err != nil {
+	if err := createFile(path.Join(p.OutputDir, "haproxy", "error-page-404.http"), bytes.NewBuffer([]byte(error404)).Bytes()); err != nil {
 		return err
 	}
 
-	return createFile(path.Join(p.OutputDir, "conf", "error-page-503.http"), bytes.NewBuffer([]byte(error503)).Bytes())
+	return createFile(path.Join(p.OutputDir, "haproxy", "error-page-503.http"), bytes.NewBuffer([]byte(error503)).Bytes())
 }
 
 func (c *GenProxyConfigCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBackendConfig) error {
@@ -266,7 +262,7 @@ func (c *GenProxyConfigCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBa
 				return err
 			}
 		}
-		if err := createFile(path.Join(p.OutputDir, "conf", m.MapName), m.Buffer.Bytes()); err != nil {
+		if err := createFile(path.Join(p.OutputDir, "haproxy", m.MapName), m.Buffer.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -283,5 +279,5 @@ func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxy
 		}
 	}
 
-	return createFile(path.Join(p.OutputDir, "conf", "cert_config.map"), certConfigMap.Bytes())
+	return createFile(path.Join(p.OutputDir, "haproxy", "cert_config.map"), certConfigMap.Bytes())
 }
