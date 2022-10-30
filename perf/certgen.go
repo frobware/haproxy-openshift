@@ -5,7 +5,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -49,9 +48,9 @@ func MarshalCertToPEMBlock(derBytes []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// GenerateCerts generates self-signed certificates suitable for
+// CreateTLSCerts generates self-signed certificates suitable for
 // client/server tls.Config .
-func GenerateCerts(name pkix.Name, notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
+func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -74,7 +73,7 @@ func GenerateCerts(name pkix.Name, notBefore, notAfter time.Time, alternateNames
 		Subject:               name,
 	}
 
-	rootCAPrivateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	rootCAPrivateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key: %v", err)
 	}

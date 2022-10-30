@@ -27,7 +27,7 @@ var CertName = pkix.Name{
 	CommonName:   "Common Name",
 }
 
-func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
+func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
 	// Provide synchronous access to the asynchronously registered
 	// port number for a backend.
 	var registeredBackends sync.Map
@@ -48,6 +48,18 @@ func serveBackendMetadata(backendsByTrafficType BackendsByTrafficType, port int,
 	mux := http.NewServeMux()
 
 	var mu sync.Mutex
+
+	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(certBundle, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	})
 
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
@@ -151,20 +163,18 @@ func CertificatePaths(certDir string) CertificatePath {
 }
 
 func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificatePath, error) {
-	certDir := path.Join(dir, "certs")
-
-	if err := os.RemoveAll(certDir); err != nil {
+	if err := os.RemoveAll(dir); err != nil {
 		return nil, err
 	}
 
-	if err := os.MkdirAll(certDir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
 
 	serverCert := certBundle.LeafCertPEM + "\n" + certBundle.LeafKeyPEM + "\n" + certBundle.RootCACertPEM
 	serverCert = strings.TrimSuffix(serverCert, "\n")
 
-	certPath := CertificatePaths(certDir)
+	certPath := CertificatePaths(dir)
 
 	if err := createFile(certPath.Domain, []byte(serverCert)); err != nil {
 		return nil, err
@@ -184,22 +194,7 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 	return &certPath, nil
 }
 
-func createNewTLSCertificates(certDir string, hosts ...string) (*CertificatePath, error) {
-	certBundle, err := GenerateCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0), hosts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate certificates: %v", err)
-	}
-	return writeCertificates(certDir, certBundle)
-}
-
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
-	certPaths, err := createNewTLSCertificates(p.OutputDir, Hostname(), "localhost", "localhost.localdomain")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(certPaths)
-
 	hostIPAddr := HostIPAddress()
 	backendsByTrafficType := BackendsByTrafficType{}
 
@@ -234,7 +229,16 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	var backendsReady = make(chan bool)
 	var backendsRegistered = 0
 
-	go serveBackendMetadata(backendsByTrafficType, p.Port, func(b BoundBackend) {
+	certBundle, err := CreateTLSCerts(CertName, time.Now(), time.Now().AddDate(1, 0, 0), Hostname())
+	if err != nil {
+		return fmt.Errorf("failed to generate certificates: %v", err)
+	}
+
+	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
+		return err
+	}
+
+	go serveBackendMetadata(certBundle, backendsByTrafficType, p.Port, func(b BoundBackend) {
 		backendsRegistered += 1
 		if backendsRegistered == len(backendsByTrafficType)*p.Nbackends {
 			backendsReady <- true
