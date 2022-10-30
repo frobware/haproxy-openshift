@@ -51,7 +51,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 				log.Fatal(err)
 			}
 		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), certs.TLSCert, certs.TLSKey); err != nil {
+			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), certs.TLSCertFile, certs.TLSKeyFile); err != nil {
 				log.Fatal(err)
 			}
 		}

@@ -9,7 +9,6 @@ import (
 	"math/rand"
 	"os"
 	"path"
-	"path/filepath"
 )
 
 type RequestConfig struct {
@@ -21,8 +20,8 @@ type RequestConfig struct {
 
 type HAProxyGlobalConfig struct {
 	Globals
-
 	Backends             []HAProxyBackendConfig
+	Certificate          string
 	HTTPPort             int
 	HTTPSPort            int
 	ListenAddress        string
@@ -91,15 +90,17 @@ func filterBackendsByType(types []TrafficType, backends []HAProxyBackendConfig) 
 }
 
 func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
-	absPath, err := filepath.Abs(path.Join(p.Globals.OutputDir))
+	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
 	if err != nil {
 		return err
 	}
-	p.Globals.OutputDir = absPath
-	certPath := CertificatePaths(path.Join(p.Globals.OutputDir, "certs"))
-	fmt.Println(certPath)
 
-	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
+	certBundle, err := fetchCertficates(p.DiscoveryURL)
+	if err != nil {
+		return err
+	}
+
+	certPaths, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle)
 	if err != nil {
 		return err
 	}
@@ -115,7 +116,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 				OutputDir:     p.OutputDir,
 				Port:          fmt.Sprintf("%v", b.Port),
 				ServerCookie:  cookie(),
-				TLSCACert:     certPath.RootCA,
+				TLSCACert:     certPaths.RootCAFile,
 				TrafficType:   t,
 			})
 		}
@@ -138,7 +139,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	if err := c.generateMainConfig(p, proxyBackends); err != nil {
+	if err := c.generateMainConfig(p, proxyBackends, certPaths.DomainFile); err != nil {
 		return err
 	}
 
@@ -146,17 +147,18 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	if err := c.generateCertConfig(p, proxyBackends); err != nil {
+	if err := c.generateCertConfig(p, proxyBackends, certPaths.DomainFile); err != nil {
 		return err
 	}
 
 	return (&GenWorkloadCmd{}).Run(p)
 }
 
-func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig, certFile string) error {
 	config := HAProxyGlobalConfig{
-		Globals:              p.Globals,
 		Backends:             backends,
+		Certificate:          certFile,
+		Globals:              p.Globals,
 		HTTPPort:             c.HTTPPort,
 		HTTPSPort:            c.HTTPSPort,
 		ListenAddress:        c.ListenAddress,
@@ -272,11 +274,11 @@ func (c *GenProxyConfigCmd) generateMapFiles(p *ProgramCtx, backends []HAProxyBa
 	return nil
 }
 
-func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig) error {
+func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxyBackendConfig, certFile string) error {
 	var certConfigMap bytes.Buffer
 
 	for _, b := range filterBackendsByType([]TrafficType{EdgeTraffic, ReencryptTraffic}, backends) {
-		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", p.Certificate, b.Name)); err != nil {
+		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", certFile, b.Name)); err != nil {
 			return err
 		}
 	}

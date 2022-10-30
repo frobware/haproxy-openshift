@@ -147,18 +147,18 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 }
 
 type CertificatePath struct {
-	Domain  string
-	RootCA  string
-	TLSCert string
-	TLSKey  string
+	DomainFile  string
+	RootCAFile  string
+	TLSCertFile string
+	TLSKeyFile  string
 }
 
 func CertificatePaths(certDir string) CertificatePath {
 	return CertificatePath{
-		Domain:  path.Join(certDir, "domain.pem"),
-		RootCA:  path.Join(certDir, "rootCA.pem"),
-		TLSKey:  path.Join(certDir, "tls.key"),
-		TLSCert: path.Join(certDir, "tls.crt"),
+		DomainFile:  path.Join(certDir, "domain.pem"),
+		RootCAFile:  path.Join(certDir, "rootCA.pem"),
+		TLSKeyFile:  path.Join(certDir, "tls.key"),
+		TLSCertFile: path.Join(certDir, "tls.crt"),
 	}
 }
 
@@ -176,18 +176,18 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 
 	certPath := CertificatePaths(dir)
 
-	if err := createFile(certPath.Domain, []byte(serverCert)); err != nil {
+	if err := createFile(certPath.DomainFile, []byte(serverCert)); err != nil {
 		return nil, err
 	}
-	if err := createFile(certPath.RootCA, []byte(certBundle.RootCACertPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.TLSCert, []byte(certBundle.LeafCertPEM)); err != nil {
+	if err := createFile(certPath.RootCAFile, []byte(certBundle.RootCACertPEM)); err != nil {
 		return nil, err
 	}
 
-	if err := createFile(certPath.TLSKey, []byte(certBundle.LeafKeyPEM)); err != nil {
+	if err := createFile(certPath.TLSCertFile, []byte(certBundle.LeafCertPEM)); err != nil {
+		return nil, err
+	}
+
+	if err := createFile(certPath.TLSKeyFile, []byte(certBundle.LeafKeyPEM)); err != nil {
 		return nil, err
 	}
 
