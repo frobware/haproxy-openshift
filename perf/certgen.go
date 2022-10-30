@@ -39,7 +39,7 @@ func init() {
 
 // CreateTLSCerts generates self-signed certificates suitable for
 // client/server tls.Config .
-func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
+func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -84,8 +84,6 @@ func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateName
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
 	})
 
-	name.CommonName = ""
-
 	// server certificate
 	cert := x509.Certificate{
 		SerialNumber: serialNumber,
@@ -93,12 +91,12 @@ func CreateTLSCerts(name pkix.Name, notBefore, notAfter time.Time, alternateName
 			Organization:       []string{"mkcert development certificate"},
 			OrganizationalUnit: []string{userAndHostname},
 		},
-		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		NotBefore:    notBefore,
-		NotAfter:     notAfter,
-		KeyUsage:     x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
+		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
+		NotBefore:   notBefore,
+		NotAfter:    notAfter,
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		// SubjectKeyId: []byte{1, 2, 3, 4, 6},
 	}
 
 	for _, host := range alternateNames {
