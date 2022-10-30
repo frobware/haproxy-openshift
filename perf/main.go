@@ -15,13 +15,9 @@ type Globals struct {
 	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
 	DiscoveryURL string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
 	HostPrefix   string      `help:"Hostname prefix" default:"perf-test-hydra"`
-	MkCert       string      `help:"Path to mkcert script" default:"mkcert.bash" type:"path"`
 	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
 	OutputDir    string      `help:"Configuration output directory" short:"o" default:"testrun"`
 	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
-	TLSCACert    string      `help:"Trust certs signed only by this CA" default:"certs/rootCA.pem" type:"path"`
-	TLSCert      string      `help:"Path to TLS certificate file" default:"certs/tls.crt" type:"path"`
-	TLSKey       string      `help:"Path to TLS key file" default:"certs/tls.key" type:"path"`
 	Version      VersionFlag `help:"Print version information and quit."`
 }
 
@@ -29,7 +25,6 @@ type CLI struct {
 	Globals
 
 	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
-	GenCerts       GenCertsCmd       `cmd:"" help:"Generate certificates."`
 	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
 	GenWorkload    GenWorkloadCmd    `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
 	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`

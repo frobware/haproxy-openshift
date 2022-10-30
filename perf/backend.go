@@ -10,9 +10,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"time"
-
-	"github.com/erikdubbelboer/gspt"
 )
 
 //go:embed *.html
@@ -43,6 +42,8 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
+	certs := CertificatePaths(path.Join(p.Globals.OutputDir, "certs"))
+
 	go func() {
 		switch t {
 		case HTTPTraffic, EdgeTraffic:
@@ -50,7 +51,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 				log.Fatal(err)
 			}
 		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), p.TLSCert, p.TLSKey); err != nil {
+			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), certs.TLSCert, certs.TLSKey); err != nil {
 				log.Fatal(err)
 			}
 		}
@@ -101,7 +102,9 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	gspt.SetProcTitle(fmt.Sprintf("%s %v %v", boundBackend.Name, listenAddr, boundBackend.Port))
+	//gspt.SetProcTitle(fmt.Sprintf("%s %v %v", boundBackend.Name, listenAddr, boundBackend.Port))
+
+	SetProcessName(fmt.Sprintf("%s %v", boundBackend.Name, boundBackend.Port))
 
 	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
 	os.Exit(2)

@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 type RequestConfig struct {
@@ -90,6 +91,14 @@ func filterBackendsByType(types []TrafficType, backends []HAProxyBackendConfig) 
 }
 
 func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
+	absPath, err := filepath.Abs(path.Join(p.Globals.OutputDir))
+	if err != nil {
+		return err
+	}
+	p.Globals.OutputDir = absPath
+	certPath := CertificatePaths(path.Join(p.Globals.OutputDir, "certs"))
+	fmt.Println(certPath)
+
 	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
 	if err != nil {
 		return err
@@ -106,17 +115,13 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 				OutputDir:     p.OutputDir,
 				Port:          fmt.Sprintf("%v", b.Port),
 				ServerCookie:  cookie(),
-				TLSCACert:     p.TLSCACert,
+				TLSCACert:     certPath.RootCA,
 				TrafficType:   t,
 			})
 		}
 	}
 
-	if err := os.RemoveAll(p.OutputDir); err != nil {
-		return err
-	}
-
-	// create all known paths that need to exist.
+	// wipe and recreate all known paths for haproxy config.
 	for _, dirPath := range [][]string{
 		{"conf"},
 		{"log"},
@@ -125,6 +130,9 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		{"run"},
 	} {
 		paths := path.Join(p.OutputDir, path.Join(dirPath...))
+		if err := os.RemoveAll(paths); err != nil {
+			return err
+		}
 		if err := os.MkdirAll(paths, 0755); err != nil {
 			return err
 		}

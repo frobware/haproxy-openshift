@@ -26,7 +26,7 @@ defaults
 
 frontend public
 
-  bind {{.ListenAddress}}:{{.HTTPPort}}
+  bind {{.ListenAddress}}:{{.HTTPPort}} v4v6
   mode http
   tcp-request inspect-delay 5s
   tcp-request content accept if HTTP
@@ -52,7 +52,7 @@ frontend public
 # that terminates encryption in this router (edge)
 frontend public_ssl
 
-  bind {{.ListenAddress}}:{{.HTTPSPort}}
+  bind {{.ListenAddress}}:{{.HTTPSPort}} v4v6
   tcp-request inspect-delay 5s
   tcp-request content accept if { req_ssl_hello_type 1 }
 

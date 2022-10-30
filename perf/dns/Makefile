@@ -1,6 +1,6 @@
-CFLAGS ?= -ggdb3 -O0 -Og -Wall -Wextra -Werror -Wno-unused-function -fPIC -D_GNU_SOURCE -fno-omit-frame-pointer
+CFLAGS ?= -ggdb3 -O0 -Og -Wall -Wextra -Werror -fPIC -D_GNU_SOURCE -fno-omit-frame-pointer
 
-all: clean libmydns.so
+all: libmydns.so
 
 libmydns.so: getaddrinfo-interposer.o
 	$(CC) $(CFLAGS) -W -shared -Wl,-soname,$@ -Wl,--no-as-needed -o $@ -ldl $<
