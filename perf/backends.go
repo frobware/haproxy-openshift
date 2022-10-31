@@ -29,7 +29,7 @@ type BoundBackend struct {
 type BackendsByTrafficType map[TrafficType][]Backend
 type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
-func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
+func serveBackendMetadata(certBundle *Certificates, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
 	// Provide synchronous access to the asynchronously registered
 	// port number for a backend.
 	var registeredBackends sync.Map

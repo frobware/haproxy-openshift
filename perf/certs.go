@@ -24,7 +24,7 @@ func certStore(certDir string) CertStore {
 	}
 }
 
-func writeCertificates(dir string, certBundle *CertificateBundle) (*CertStore, error) {
+func writeCertificates(dir string, certBundle *Certificates) (*CertStore, error) {
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, err
 	}

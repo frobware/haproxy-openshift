@@ -28,7 +28,7 @@ func fetchAllBackendMetadata(uri string) (BoundBackendsByTrafficType, error) {
 	return nil, fmt.Errorf("/backends request failed %v", resp.StatusCode)
 }
 
-func fetchCertficates(uri string) (*CertificateBundle, error) {
+func fetchCertficates(uri string) (*Certificates, error) {
 	url := fmt.Sprintf("%s/certs", uri)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -40,7 +40,7 @@ func fetchCertficates(uri string) (*CertificateBundle, error) {
 		if err != nil {
 			return nil, err
 		}
-		var certBundle CertificateBundle
+		var certBundle Certificates
 		if err := json.Unmarshal(body, &certBundle); err != nil {
 			return nil, err
 		}

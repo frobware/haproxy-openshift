@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type CertificateBundle struct {
+type Certificates struct {
 	LeafCertPEM   string
 	LeafKeyPEM    string
 	RootCACertPEM string
@@ -22,7 +22,7 @@ type CertificateBundle struct {
 
 // CreateTLSCerts generates self-signed certificates suitable for
 // client/server tls.Config.
-func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
+func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*Certificates, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
@@ -118,7 +118,7 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 		return nil, err
 	}
 
-	return &CertificateBundle{
+	return &Certificates{
 		LeafCertPEM:   certPEM.String(),
 		LeafKeyPEM:    certPrivKeyPEM.String(),
 		RootCACertPEM: caPEM.String(),
