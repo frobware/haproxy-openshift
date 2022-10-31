@@ -91,8 +91,8 @@ func generateMBRequests(p *ProgramCtx, useProxy bool, cfg MBRequestConfig, backe
 	return requests
 }
 
-func (c *GenWorkloadCmd) writeRequests(p *ProgramCtx, category string, useProxy bool, backendsByTrafficType BoundBackendsByTrafficType) error {
-	for _, scenario := range []struct {
+func writeRequests(p *ProgramCtx, basedir string, tlsSessionReuse bool, category string, useProxy bool, backendsByTrafficType BoundBackendsByTrafficType) error {
+	for _, requestCfg := range []struct {
 		Name         string
 		TrafficTypes []TrafficType
 	}{
@@ -106,18 +106,18 @@ func (c *GenWorkloadCmd) writeRequests(p *ProgramCtx, category string, useProxy 
 			config := MBRequestConfig{
 				Clients:           len(backendsByTrafficType[EdgeTraffic]),
 				KeepAliveRequests: keepAliveRequests,
-				TLSSessionReuse:   p.TLSReuse,
-				TrafficTypes:      scenario.TrafficTypes,
+				TLSSessionReuse:   tlsSessionReuse,
+				TrafficTypes:      requestCfg.TrafficTypes,
 			}
-			requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
+			requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(requestCfg.TrafficTypes, backendsByTrafficType))
 			data, err := json.MarshalIndent(requests, "", "  ")
 			if err != nil {
 				return err
 			}
-			filepath := fmt.Sprintf("%s/mb/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v-requests.json",
-				p.OutputDir,
+			filepath := fmt.Sprintf("%s/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v.json",
+				basedir,
 				category,
-				scenario.Name,
+				requestCfg.Name,
 				len(requests)/len(config.TrafficTypes),
 				config.Clients,
 				config.KeepAliveRequests)
@@ -131,7 +131,8 @@ func (c *GenWorkloadCmd) writeRequests(p *ProgramCtx, category string, useProxy 
 }
 
 func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
-	if err := os.RemoveAll(path.Join(p.OutputDir, "mb")); err != nil {
+	basedir := path.Join(p.OutputDir, "requests")
+	if err := os.RemoveAll(basedir); err != nil {
 		return err
 	}
 
@@ -147,7 +148,7 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 		{"direct", false},
 		{"haproxy", true},
 	} {
-		if err := c.writeRequests(p, cfg.subdir, cfg.useProxy, backendsByTrafficType); err != nil {
+		if err := writeRequests(p, basedir, p.TLSReuse, cfg.subdir, cfg.useProxy, backendsByTrafficType); err != nil {
 			return err
 		}
 	}
