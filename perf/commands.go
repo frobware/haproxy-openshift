@@ -27,7 +27,7 @@ type ServeBackendCmd struct {
 	Name          string
 	ListenAddress string
 	TrafficType   TrafficType
-	//Args          []string `arg:""`
+	Args          []string `arg:""`
 }
 
 type VersionCmd struct{}

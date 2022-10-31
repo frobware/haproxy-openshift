@@ -44,19 +44,19 @@ const (
 	HTTPRedirectMapName     = "os_route_http_redirect.map"
 )
 
-//go:embed haproxy/globals.tmpl
+//go:embed templates/haproxy/globals.tmpl
 var globalTemplate string
 
-//go:embed haproxy/defaults.tmpl
+//go:embed templates/haproxy/defaults.tmpl
 var defaultTemplate string
 
-//go:embed haproxy/backends.tmpl
+//go:embed templates/haproxy/backends.tmpl
 var backendTemplate string
 
-//go:embed haproxy/error-page-404.http
+//go:embed templates/haproxy/error-page-404.http
 var error404 string
 
-//go:embed haproxy/error-page-503.http
+//go:embed templates/haproxy/error-page-503.http
 var error503 string
 
 func cookie() string {

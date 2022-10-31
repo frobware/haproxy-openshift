@@ -96,7 +96,6 @@ static __attribute__((constructor)) void setup()
 		proxy_host = hostname;
 	}
 
-	printf("proxy_host %s\n", proxy_host);
 	fprintf(stderr, "Setting PROXY_HOST=%s\n", proxy_host);
 }
 
