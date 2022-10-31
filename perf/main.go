@@ -27,7 +27,7 @@ type CLI struct {
 	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
 	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
 	GenWorkload    GenWorkloadCmd    `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
-	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend."`
+	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`
 	ServeBackends  ServeBackendsCmd  `cmd:"" help:"Serve backends."`
 	Version        VersionCmd        `cmd:"" help:"Print version information and quit."`
 }
