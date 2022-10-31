@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"os"
-	"os/user"
 	"time"
 )
 
@@ -20,21 +18,6 @@ type CertificateBundle struct {
 	LeafKeyPEM    string
 	RootCACertPEM string
 	RootCAKeyPEM  string
-}
-
-var userAndHostname string
-
-func init() {
-	u, err := user.Current()
-	if err == nil {
-		userAndHostname = u.Username + "@"
-	}
-	if h, err := os.Hostname(); err == nil {
-		userAndHostname += h
-	}
-	if err == nil && u.Name != "" && u.Name != u.Username {
-		userAndHostname += " (" + u.Name + ")"
-	}
 }
 
 // CreateTLSCerts generates self-signed certificates suitable for
@@ -46,7 +29,7 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 		return nil, fmt.Errorf("failed to generate serial number: %v", err)
 	}
 
-	caPrivKey, err := rsa.GenerateKey(rand.Reader, 3072)
+	caPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate key: %v", err)
 	}
@@ -54,9 +37,9 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 	ca := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:       []string{"mkcert development certificate"},
-			OrganizationalUnit: []string{userAndHostname},
-			CommonName:         "mkcert " + userAndHostname,
+			Organization:       []string{"perf development certificate"},
+			OrganizationalUnit: []string{"perf dept"},
+			CommonName:         "perf",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
@@ -64,7 +47,6 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 		KeyUsage:              x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 		MaxPathLenZero:        true,
-		// SubjectKeyId:          []byte{1, 2, 3, 4, 6},
 	}
 
 	caBytes, err := x509.CreateCertificate(rand.Reader, &ca, &ca, &caPrivKey.PublicKey, caPrivKey)
@@ -88,15 +70,14 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 	cert := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:       []string{"mkcert development certificate"},
-			OrganizationalUnit: []string{userAndHostname},
+			Organization:       []string{"perf development certificate"},
+			OrganizationalUnit: []string{"perf dept"},
 		},
 		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:   notBefore,
 		NotAfter:    notAfter,
 		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		// SubjectKeyId: []byte{1, 2, 3, 4, 6},
 	}
 
 	for _, host := range alternateNames {
