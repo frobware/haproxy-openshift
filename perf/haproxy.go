@@ -12,7 +12,6 @@ import (
 )
 
 type HAProxyGlobalConfig struct {
-	Globals
 	Backends             []HAProxyBackendConfig
 	Certificate          string
 	HTTPPort             int
@@ -147,7 +146,6 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 	config := HAProxyGlobalConfig{
 		Backends:             backends,
 		Certificate:          certFile,
-		Globals:              p.Globals,
 		HTTPPort:             c.HTTPPort,
 		HTTPSPort:            c.HTTPSPort,
 		ListenAddress:        c.ListenAddress,
