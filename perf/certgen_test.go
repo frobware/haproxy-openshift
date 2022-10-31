@@ -15,6 +15,7 @@ import (
 func TestCertGen(t *testing.T) {
 	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0),
 		mustResolveHostname(),
+		mustResolveHostIP(),
 		"localhost",
 		"127.0.0.1",
 		"::1")
@@ -50,11 +51,11 @@ func TestCertGen(t *testing.T) {
 	transport := &http.Transport{
 		TLSClientConfig: clientTLSConf,
 	}
-	http := http.Client{
+	client := http.Client{
 		Transport: transport,
 	}
 
-	resp, err := http.Get(server.URL)
+	resp, err := client.Get(server.URL)
 	if err != nil {
 		t.Fatal(err)
 	}

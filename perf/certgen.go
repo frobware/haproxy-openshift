@@ -111,9 +111,9 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 	})
 
 	return &CertificateBundle{
-		LeafCertPEM:   string(certPEM.String()),
-		LeafKeyPEM:    string(certPrivKeyPEM.String()),
-		RootCACertPEM: string(caPEM.String()),
-		RootCAKeyPEM:  string(caPrivKeyPEM.String()),
+		LeafCertPEM:   certPEM.String(),
+		LeafKeyPEM:    certPrivKeyPEM.String(),
+		RootCACertPEM: caPEM.String(),
+		RootCAKeyPEM:  caPrivKeyPEM.String(),
 	}, nil
 }
