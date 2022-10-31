@@ -29,12 +29,6 @@ type BoundBackend struct {
 type BackendsByTrafficType map[TrafficType][]Backend
 type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
-const (
-	ChildBackendListenAddress      = "CHILD_BACKEND_LISTEN_ADDRESS"
-	ChildBackendEnvName            = "CHILD_BACKEND_NAME"
-	ChildBackendTrafficTypeEnvName = "CHILD_BACKEND_TERMINATION_TYPE"
-)
-
 func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
 	// Provide synchronous access to the asynchronously registered
 	// port number for a backend.
