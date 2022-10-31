@@ -86,18 +86,19 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("POST failed for %+v: %v\n", boundBackend, err)
 	}
 
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(resp.Body)
+	defer func(Body io.ReadCloser) { _ = Body.Close() }(resp.Body)
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
 	}
+
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
 	_, _ = os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-	os.Exit(0)
+	os.Exit(0) // the parent has exited we should too.
+
 	return nil
 }
