@@ -86,8 +86,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-	os.Exit(2)
-
+	_, _ = os.NewFile(3, "<pipe>").Read(make([]byte, 1))
+	os.Exit(0)
 	return nil
 }

@@ -55,16 +55,20 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 	}
 
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+	if err := pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	caPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(caPrivKey),
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	// server certificate
 	cert := x509.Certificate{
@@ -99,16 +103,20 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 	}
 
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	if err := pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
+	if err := pem.Encode(certPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return &CertificateBundle{
 		LeafCertPEM:   certPEM.String(),

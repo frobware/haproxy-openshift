@@ -34,7 +34,9 @@ func TestCertGen(t *testing.T) {
 	}
 
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "success!")
+		if _, err := fmt.Fprintln(w, "success!"); err != nil {
+			t.Fatal(err)
+		}
 	}))
 
 	server.TLS = serverTLSConf

@@ -10,21 +10,21 @@ import (
 
 // https://github.com/jmencak/mb
 
-// Multiple-host HTTP(s) Benchmarking tool
+// MBRequest is a Multiple-host HTTP(s) Benchmarking tool request.
 type MBRequest struct {
-	Clients           int64  `json:"clients"`
+	Clients           int    `json:"clients"`
 	Host              string `json:"host"`
-	KeepAliveRequests int64  `json:"keep-alive-requests"`
+	KeepAliveRequests int    `json:"keep-alive-requests"`
 	Method            string `json:"method"`
 	Path              string `json:"path"`
-	Port              int64  `json:"port"`
+	Port              int    `json:"port"`
 	Scheme            string `json:"scheme"`
 	TLSSessionReuse   bool   `json:"tls-session-reuse"`
 }
 
 type MBRequestConfig struct {
-	Clients           int64
-	KeepAliveRequests int64
+	Clients           int
+	KeepAliveRequests int
 	TLSSessionReuse   bool
 	TrafficTypes      []TrafficType
 }
@@ -67,7 +67,7 @@ func (c *GenProxyConfigCmd) generateMBRequests(cfg MBRequestConfig, backends []B
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
-			Port:              int64(port(b.TrafficType)),
+			Port:              port(b.TrafficType),
 			Scheme:            scheme(b.TrafficType),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
 		})
@@ -96,9 +96,9 @@ func (c *GenProxyConfigCmd) generateMBTestScenarios(p *ProgramCtx) error {
 		{"passthrough", []TrafficType{PassthroughTraffic}},
 		{"reencrypt", []TrafficType{ReencryptTraffic}},
 	} {
-		for _, keepAliveRequests := range []int64{0} {
+		for _, keepAliveRequests := range []int{0} {
 			config := MBRequestConfig{
-				Clients:           int64(len(backendsByTrafficType[EdgeTraffic])),
+				Clients:           len(backendsByTrafficType[EdgeTraffic]),
 				KeepAliveRequests: keepAliveRequests,
 				TLSSessionReuse:   c.TLSReuse,
 				TrafficTypes:      scenario.TrafficTypes,
