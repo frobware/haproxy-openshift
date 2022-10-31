@@ -38,7 +38,7 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 		for _, b := range backendsByTrafficType[t] {
 			obj, ok := registeredBackends.Load(b.Name)
 			if !ok {
-				panic("missing port for" + b.Name)
+				panic("missing backend registration for" + b.Name)
 			}
 			boundBackend, ok := obj.(BoundBackend)
 			if !ok {
@@ -90,11 +90,14 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 
 			for _, t := range AllTrafficTypes {
 				for _, b := range backendsByTrafficType[t] {
-					x, ok := registeredBackends.Load(b.Name)
+					obj, ok := registeredBackends.Load(b.Name)
 					if !ok {
-						panic("missing port for" + b.Name)
+						panic("missing registration for" + b.Name)
 					}
-					boundBackend := x.(BoundBackend)
+					boundBackend, ok := obj.(BoundBackend)
+					if !ok {
+						panic(fmt.Sprintf("unexpected type: %T", obj))
+					}
 					boundBackendsByTrafficType[t] = append(boundBackendsByTrafficType[t],
 						BoundBackend{
 							Backend:       b,
