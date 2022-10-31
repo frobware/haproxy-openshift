@@ -102,10 +102,6 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	//gspt.SetProcTitle(fmt.Sprintf("%s %v %v", boundBackend.Name, listenAddr, boundBackend.Port))
-
-	SetProcessName(fmt.Sprintf("%s %v", boundBackend.Name, boundBackend.Port))
-
 	os.NewFile(3, "<pipe>").Read(make([]byte, 1))
 	os.Exit(2)
 
