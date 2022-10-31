@@ -9,11 +9,25 @@ import (
 	"os"
 	"os/signal"
 	"path"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
+
+type Backend struct {
+	Name        string      `json:"name"`
+	TrafficType TrafficType `json:"traffic_type"`
+}
+
+type BoundBackend struct {
+	Backend
+
+	ListenAddress string `json:"listen_address"`
+	Port          int    `json:"port"`
+}
+
+type BackendsByTrafficType map[TrafficType][]Backend
+type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
 const (
 	ChildBackendListenAddress      = "CHILD_BACKEND_LISTEN_ADDRESS"
@@ -47,18 +61,6 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 
 	var mu sync.Mutex
 
-	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
-		data, err := json.MarshalIndent(certBundle, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if _, err := io.WriteString(w, string(data)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	})
-
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -74,6 +76,18 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 		}
 		registeredBackends.Store(boundBackend.Name, boundBackend)
 		postNotifier(boundBackend)
+	})
+
+	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(certBundle, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
@@ -142,56 +156,6 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 	}
 }
 
-func certStore(certDir string) CertStore {
-	return CertStore{
-		DomainFile:    path.Join(certDir, "domain.pem"),
-		RootCAFile:    path.Join(certDir, "rootCA.pem"),
-		RootCAKeyFile: path.Join(certDir, "rootCA-key.pem"),
-		TLSKeyFile:    path.Join(certDir, "tls.key"),
-		TLSCertFile:   path.Join(certDir, "tls.crt"),
-	}
-}
-
-func writeCertificates(dir string, certBundle *CertificateBundle) (*CertStore, error) {
-	if err := os.RemoveAll(dir); err != nil {
-		return nil, err
-	}
-
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
-	}
-
-	certPath := certStore(dir)
-
-	domainPEM := strings.Join([]string{
-		strings.TrimSuffix(certBundle.LeafCertPEM, "\n"),
-		strings.TrimSuffix(certBundle.LeafKeyPEM, "\n"),
-		strings.TrimSuffix(certBundle.RootCACertPEM, "\n"),
-	}, "\n")
-
-	if err := createFile(certPath.DomainFile, []byte(strings.TrimSuffix(domainPEM, "\n"))); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.RootCAFile, []byte(certBundle.RootCACertPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.RootCAKeyFile, []byte(certBundle.RootCAKeyPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.TLSCertFile, []byte(certBundle.LeafCertPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.TLSKeyFile, []byte(certBundle.LeafKeyPEM)); err != nil {
-		return nil, err
-	}
-
-	return &certPath, nil
-}
-
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	backendsByTrafficType := BackendsByTrafficType{}
 
@@ -221,6 +185,8 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), mustResolveHostIP()))
 
 	go func() {
+		// if a backend exits then exit everything as
+		// something unexpected occurred.
 		sigc := make(chan os.Signal, 1)
 		signal.Notify(sigc, syscall.SIGCHLD)
 		log.Println(<-sigc)

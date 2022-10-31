@@ -8,7 +8,28 @@ import (
 	"path"
 )
 
-func (c *GenWorkloadCmd) generateWorkloadRequests(cfg RequestConfig, backends []BoundBackend) []MBRequest {
+// https://github.com/jmencak/mb
+
+// Multiple-host HTTP(s) Benchmarking tool
+type MBRequest struct {
+	Clients           int64  `json:"clients"`
+	Host              string `json:"host"`
+	KeepAliveRequests int64  `json:"keep-alive-requests"`
+	Method            string `json:"method"`
+	Path              string `json:"path"`
+	Port              int64  `json:"port"`
+	Scheme            string `json:"scheme"`
+	TLSSessionReuse   bool   `json:"tls-session-reuse"`
+}
+
+type MBRequestConfig struct {
+	Clients           int64
+	KeepAliveRequests int64
+	TLSSessionReuse   bool
+	TrafficTypes      []TrafficType
+}
+
+func (c *GenWorkloadCmd) generateWorkloadRequests(cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
 	var requests []MBRequest
 
 	for _, b := range backends {
@@ -58,7 +79,7 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 		{"reencrypt", []TrafficType{ReencryptTraffic}},
 	} {
 		for _, keepAliveRequests := range []int64{0} {
-			config := RequestConfig{
+			config := MBRequestConfig{
 				Clients:           int64(len(backendsByTrafficType[EdgeTraffic])),
 				KeepAliveRequests: keepAliveRequests,
 				TLSSessionReuse:   c.TLSReuse,

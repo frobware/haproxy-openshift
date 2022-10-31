@@ -24,7 +24,10 @@ type ServeBackendsCmd struct {
 }
 
 type ServeBackendCmd struct {
-	Args []string `arg:""`
+	Name          string
+	ListenAddress string
+	TrafficType   TrafficType
+	//Args          []string `arg:""`
 }
 
 type VersionCmd struct{}

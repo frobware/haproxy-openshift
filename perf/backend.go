@@ -23,7 +23,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("%q not found in environment", ChildBackendListenAddress)
 	}
 
-	if listenAddr == "127.0.0.1" {
+	if listenAddr == "" || listenAddr == "127.0.0.1" || listenAddr == "::1" {
 		listenAddr = string(mustResolveHostIP())
 	}
 
