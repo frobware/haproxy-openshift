@@ -207,10 +207,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("failed to generate certificates: %v", err)
 	}
 
-	// var b []byte = make([]byte, 1)
-	// fmt.Println("write certs")
-	// os.Stdin.Read(b)
-
 	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
 		return err
 	}
@@ -227,17 +223,12 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		len(AllTrafficTypes)*p.Nbackends/len(AllTrafficTypes),
 		AllTrafficTypes)
 
-	listenAddress := c.ListenAddress
-	if listenAddress == "" || listenAddress == "127.0.0.1" || listenAddress == "::1" {
-		listenAddress = mustResolveHostIP()
-	}
-
 	for _, backends := range backendsByTrafficType {
 		for _, backend := range backends {
 			newArgs := os.Args[:1]
 			newArgs = append(newArgs, []string{
 				"serve-backend",
-				fmt.Sprintf("--listen-address=%s", listenAddress),
+				fmt.Sprintf("--listen-address=%s", c.ListenAddress),
 				fmt.Sprintf("--name=%s", backend.Name),
 				fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
 			}...)

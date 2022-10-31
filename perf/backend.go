@@ -22,7 +22,12 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	var t = mustParseTrafficType(string(c.TrafficType))
 
-	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", c.ListenAddress))
+	listenAddress := c.ListenAddress
+	if listenAddress == "" || listenAddress == "127.0.0.1" || listenAddress == "::1" {
+		listenAddress = "0.0.0.0"
+	}
+
+	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddress))
 	if err != nil {
 		return err
 	}
@@ -42,12 +47,18 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		}
 	}()
 
+	if listenAddress == "0.0.0.0" {
+		// we're going to advertise this address so make it
+		// discoverable/routable.
+		listenAddress = mustResolveHostIP()
+	}
+
 	boundBackend := BoundBackend{
 		Backend: Backend{
 			Name:        c.Name,
 			TrafficType: t,
 		},
-		ListenAddress: c.ListenAddress,
+		ListenAddress: listenAddress,
 		Port:          l.Addr().(*net.TCPAddr).Port,
 	}
 
