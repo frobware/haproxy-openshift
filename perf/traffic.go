@@ -25,6 +25,7 @@ func (t TrafficType) Scheme() string {
 	}
 }
 
+// REMOVE
 func (t TrafficType) Port() int64 {
 	switch t {
 	case HTTPTraffic:

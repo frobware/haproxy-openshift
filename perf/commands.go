@@ -12,7 +12,7 @@ type GenProxyConfigCmd struct {
 }
 
 type GenHostsCmd struct {
-	IP string
+	IPAddress string
 }
 
 type GenWorkloadCmd struct {
@@ -24,10 +24,9 @@ type ServeBackendsCmd struct {
 }
 
 type ServeBackendCmd struct {
-	Name          string
-	ListenAddress string
-	TrafficType   TrafficType
-	Args          []string `arg:""`
+	Name          string      `default:"<error>"`
+	ListenAddress string      `default:"<error>"`
+	TrafficType   TrafficType `default:"<error>"`
 }
 
 type VersionCmd struct{}

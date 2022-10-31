@@ -27,7 +27,7 @@ type CLI struct {
 	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
 	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
 	GenWorkload    GenWorkloadCmd    `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
-	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`
+	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend."`
 	ServeBackends  ServeBackendsCmd  `cmd:"" help:"Serve backends."`
 	Version        VersionCmd        `cmd:"" help:"Print version information and quit."`
 }
@@ -76,6 +76,7 @@ func main() {
 		cli.Globals.DiscoveryURL = v
 	}
 
+	// This is to fix cert locations in the haproxy.config.
 	absPath, err := filepath.Abs(cli.Globals.OutputDir)
 	if err != nil {
 		log.Fatal(err)

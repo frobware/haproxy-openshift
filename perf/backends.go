@@ -241,12 +241,16 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 			// change the current program arguments so
 			// that the exec, and subsequent command line
 			// parsing, ensures we call serve-backend
-			// (singular) and not server-backends
-			// (plural). Otherwise we'll end up back here.
+			// (singular) and not serve-backends (plural).
+			// Otherwise we'll end up back here.
 			newArgs := os.Args[:1]
-			newArgs = append(newArgs, "serve-backend")
-			args := append(newArgs, fmt.Sprintf("#%v %v", backend.Name, c.ListenAddress))
-			if _, err := syscall.ForkExec(args[0], args, &syscall.ProcAttr{
+			newArgs = append(newArgs, []string{
+				"serve-backend",
+				fmt.Sprintf("--listen-address=%s", c.ListenAddress),
+				fmt.Sprintf("--name=%s", backend.Name),
+				fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
+			}...)
+			if _, err := syscall.ForkExec(os.Args[0], newArgs, &syscall.ProcAttr{
 				Env:   append(os.Environ(), childEnv...),
 				Files: []uintptr{0, 1, 2, r.Fd()},
 			}); err != nil {

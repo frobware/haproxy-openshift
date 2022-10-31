@@ -6,8 +6,8 @@ import (
 
 func (c *GenHostsCmd) Run(p *ProgramCtx) error {
 	addr := mustResolveHostIP()
-	if c.IP != "" {
-		addr = c.IP
+	if c.IPAddress != "" {
+		addr = c.IPAddress
 	}
 	for _, t := range etcHosts(p, addr) {
 		fmt.Println(t)
