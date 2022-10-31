@@ -140,7 +140,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return generateMBTestScenarios(p, c.TLSReuse)
+	return c.generateMBTestScenarios(p)
 }
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig, certFile string) error {

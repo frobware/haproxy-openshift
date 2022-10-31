@@ -16,25 +16,6 @@ var AllTrafficTypes = [...]TrafficType{
 	ReencryptTraffic,
 }
 
-func (t TrafficType) Scheme() string {
-	switch t {
-	case HTTPTraffic:
-		return "http"
-	default:
-		return "https"
-	}
-}
-
-// REMOVE
-func (t TrafficType) Port() int64 {
-	switch t {
-	case HTTPTraffic:
-		return 8080
-	default:
-		return 8443
-	}
-}
-
 func mustParseTrafficType(s string) TrafficType {
 	switch s {
 	case "http":
