@@ -39,35 +39,39 @@ func filterInTrafficByType(types []TrafficType, backendsMap BoundBackendsByTraff
 	return result
 }
 
-func (c *GenWorkloadCmd) generateMBRequests(p *ProgramCtx, cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
+func generateMBRequests(p *ProgramCtx, useProxy bool, cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
 	var requests []MBRequest
 
 	port := func(b BoundBackend, useProxy bool) int {
-		if !c.UseProxy {
-			return b.Port
-		}
-		switch b.TrafficType {
-		case HTTPTraffic:
-			return p.HTTPPort
+		switch useProxy {
+		case true:
+			switch b.TrafficType {
+			case HTTPTraffic:
+				return p.HTTPPort
+			default:
+				return p.HTTPSPort
+			}
 		default:
-			return p.HTTPSPort
+			return b.Port
 		}
 	}
 
-	scheme := func(t TrafficType) string {
-		if !c.UseProxy {
+	scheme := func(t TrafficType, useProxy bool) string {
+		switch useProxy {
+		case true:
+			switch t {
+			case HTTPTraffic:
+				return "http"
+			default:
+				return "https"
+			}
+		default:
 			switch t {
 			case HTTPTraffic, EdgeTraffic:
 				return "http"
 			default:
 				return "https"
 			}
-		}
-		switch t {
-		case HTTPTraffic:
-			return "http"
-		default:
-			return "https"
 		}
 	}
 
@@ -78,8 +82,8 @@ func (c *GenWorkloadCmd) generateMBRequests(p *ProgramCtx, cfg MBRequestConfig, 
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
-			Port:              port(b, false),
-			Scheme:            scheme(b.TrafficType),
+			Port:              port(b, useProxy),
+			Scheme:            scheme(b.TrafficType, useProxy),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
 		})
 	}
@@ -87,16 +91,7 @@ func (c *GenWorkloadCmd) generateMBRequests(p *ProgramCtx, cfg MBRequestConfig, 
 	return requests
 }
 
-func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
-	if err := os.RemoveAll(path.Join(p.OutputDir, "mb")); err != nil {
-		return err
-	}
-
-	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
-	if err != nil {
-		return err
-	}
-
+func (c *GenWorkloadCmd) writeRequests(p *ProgramCtx, category string, useProxy bool, backendsByTrafficType BoundBackendsByTrafficType) error {
 	for _, scenario := range []struct {
 		Name         string
 		TrafficTypes []TrafficType
@@ -114,13 +109,14 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 				TLSSessionReuse:   p.TLSReuse,
 				TrafficTypes:      scenario.TrafficTypes,
 			}
-			requests := c.generateMBRequests(p, config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
+			requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
 			data, err := json.MarshalIndent(requests, "", "  ")
 			if err != nil {
 				return err
 			}
-			filepath := fmt.Sprintf("%s/mb/traffic-%v-backends-%v-clients-%v-keepalives-%v-requests.json",
+			filepath := fmt.Sprintf("%s/mb/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v-requests.json",
 				p.OutputDir,
+				category,
 				scenario.Name,
 				len(requests)/len(config.TrafficTypes),
 				config.Clients,
@@ -128,6 +124,31 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 			if err := createFile(filepath, data); err != nil {
 				return fmt.Errorf("error generating %s: %v", filepath, err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
+	if err := os.RemoveAll(path.Join(p.OutputDir, "mb")); err != nil {
+		return err
+	}
+
+	backendsByTrafficType, err := fetchAllBackendMetadata(p.DiscoveryURL)
+	if err != nil {
+		return err
+	}
+
+	for _, cfg := range []struct {
+		subdir   string
+		useProxy bool
+	}{
+		{"direct", false},
+		{"haproxy", true},
+	} {
+		if err := c.writeRequests(p, cfg.subdir, cfg.useProxy, backendsByTrafficType); err != nil {
+			return err
 		}
 	}
 
