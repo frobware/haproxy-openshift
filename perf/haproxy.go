@@ -11,13 +11,6 @@ import (
 	"path"
 )
 
-type RequestConfig struct {
-	Clients           int64
-	KeepAliveRequests int64
-	TLSSessionReuse   bool
-	TrafficTypes      []TrafficType
-}
-
 type HAProxyGlobalConfig struct {
 	Globals
 	Backends             []HAProxyBackendConfig

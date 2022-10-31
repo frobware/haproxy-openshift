@@ -38,7 +38,7 @@ func init() {
 }
 
 // CreateTLSCerts generates self-signed certificates suitable for
-// client/server tls.Config .
+// client/server tls.Config.
 func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*CertificateBundle, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)

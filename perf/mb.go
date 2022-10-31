@@ -8,28 +8,11 @@ import (
 	"path"
 )
 
-type Request struct {
-	Clients           int64  `json:"clients"`
-	Delay             Delay  `json:"delay"`
-	Host              string `json:"host"`
-	KeepAliveRequests int64  `json:"keep-alive-requests"`
-	Method            string `json:"method"`
-	Path              string `json:"path"`
-	Port              int64  `json:"port"`
-	Scheme            string `json:"scheme"`
-	TLSSessionReuse   bool   `json:"tls-session-reuse"`
-}
-
-type Delay struct {
-	Max int64 `json:"max"`
-	Min int64 `json:"min"`
-}
-
-func (c *GenWorkloadCmd) generateWorkloadRequests(cfg RequestConfig, backends []BoundBackend) []Request {
-	var requests []Request
+func (c *GenWorkloadCmd) generateWorkloadRequests(cfg RequestConfig, backends []BoundBackend) []MBRequest {
+	var requests []MBRequest
 
 	for _, b := range backends {
-		requests = append(requests, Request{
+		requests = append(requests, MBRequest{
 			Clients:           cfg.Clients,
 			Host:              b.Name,
 			KeepAliveRequests: cfg.KeepAliveRequests,

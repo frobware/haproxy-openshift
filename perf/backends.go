@@ -28,11 +28,15 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 
 	printBackendsForType := func(w io.Writer, t TrafficType) error {
 		for _, b := range backendsByTrafficType[t] {
-			port, ok := registeredBackends.Load(b.Name)
+			obj, ok := registeredBackends.Load(b.Name)
 			if !ok {
 				panic("missing port for" + b.Name)
 			}
-			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v %v\n", b.HostAddr, b.Name, port, b.TrafficType)); err != nil {
+			boundBackend, ok := obj.(BoundBackend)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type: %T", obj))
+			}
+			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v\n", b.Name, boundBackend.ListenAddress, boundBackend.Port)); err != nil {
 				return err
 			}
 		}
@@ -58,20 +62,18 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
-
 		if r.Method != "POST" {
-			panic("unexpected: " + r.Method)
+			http.Error(w, r.Method, http.StatusBadRequest)
 		}
-
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()
-		var x BoundBackend
-		if err := decoder.Decode(&x); err != nil {
+		var boundBackend BoundBackend
+		if err := decoder.Decode(&boundBackend); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		registeredBackends.Store(x.Name, x)
-		postNotifier(x)
+		registeredBackends.Store(boundBackend.Name, boundBackend)
+		postNotifier(boundBackend)
 	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
@@ -140,16 +142,8 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 	}
 }
 
-type CertificatePath struct {
-	DomainFile    string
-	RootCAFile    string
-	RootCAKeyFile string
-	TLSCertFile   string
-	TLSKeyFile    string
-}
-
-func CertificatePaths(certDir string) CertificatePath {
-	return CertificatePath{
+func certStore(certDir string) CertStore {
+	return CertStore{
 		DomainFile:    path.Join(certDir, "domain.pem"),
 		RootCAFile:    path.Join(certDir, "rootCA.pem"),
 		RootCAKeyFile: path.Join(certDir, "rootCA-key.pem"),
@@ -158,7 +152,7 @@ func CertificatePaths(certDir string) CertificatePath {
 	}
 }
 
-func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificatePath, error) {
+func writeCertificates(dir string, certBundle *CertificateBundle) (*CertStore, error) {
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, err
 	}
@@ -167,7 +161,7 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 		return nil, err
 	}
 
-	certPath := CertificatePaths(dir)
+	certPath := certStore(dir)
 
 	domainPEM := strings.Join([]string{
 		strings.TrimSuffix(certBundle.LeafCertPEM, "\n"),
@@ -199,30 +193,32 @@ func writeCertificates(dir string, certBundle *CertificateBundle) (*CertificateP
 }
 
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
-	hostIPAddr := HostIPAddress()
 	backendsByTrafficType := BackendsByTrafficType{}
 
 	if err := os.RemoveAll(path.Join(p.OutputDir, "certs")); err != nil {
 		return err
 	}
 
-	var subjectAltNames = []string{Hostname(), "localhost", "127.0.0.1", "::1"}
+	var subjectAltNames = []string{
+		mustResolveHostname(),
+		mustResolveHostIP(),
+		"localhost",
+		"127.0.0.1",
+		"::1",
+	}
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
 			backend := Backend{
-				HostAddr:    hostIPAddr.String(),
 				Name:        fmt.Sprintf("%s-%v-%v", p.HostPrefix, t, i),
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
-			if t != HTTPTraffic {
-				subjectAltNames = append(subjectAltNames, backend.Name)
-			}
+			subjectAltNames = append(subjectAltNames, backend.Name)
 		}
 	}
 
-	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), HostIPAddress()))
+	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), mustResolveHostIP()))
 
 	go func() {
 		sigc := make(chan os.Signal, 1)
@@ -295,7 +291,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	<-backendsReady
 	log.Printf("%d backends registered", backendsRegistered)
-	log.Printf("metadata server running at http://%s:%v/backends\n", Hostname(), p.Port)
+	log.Printf("metadata server running at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
 	<-p.Context.Done()
 	return nil
 }

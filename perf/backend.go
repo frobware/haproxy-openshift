@@ -23,6 +23,10 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("%q not found in environment", ChildBackendListenAddress)
 	}
 
+	if listenAddr == "127.0.0.1" {
+		listenAddr = string(mustResolveHostIP())
+	}
+
 	backendName, found := os.LookupEnv(ChildBackendEnvName)
 	if !found {
 		return fmt.Errorf("%q not found in environment", ChildBackendEnvName)
@@ -42,7 +46,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	certs := CertificatePaths(path.Join(p.Globals.OutputDir, "certs"))
+	certs := certStore(path.Join(p.Globals.OutputDir, "certs"))
 
 	go func() {
 		switch t {
@@ -59,7 +63,6 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	boundBackend := BoundBackend{
 		Backend: Backend{
-			HostAddr:    HostIPAddress().String(),
 			Name:        backendName,
 			TrafficType: t,
 		},

@@ -14,7 +14,7 @@ import (
 
 func TestCertGen(t *testing.T) {
 	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0),
-		Hostname(),
+		mustResolveHostname(),
 		"localhost",
 		"127.0.0.1",
 		"::1")

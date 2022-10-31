@@ -11,27 +11,7 @@ import (
 	"path/filepath"
 )
 
-type Backend struct {
-	HostAddr    string      `json:"host_addr"`
-	Name        string      `json:"name"`
-	TrafficType TrafficType `json:"traffic_type"`
-}
-
-type BoundBackend struct {
-	Backend
-
-	ListenAddress string `json:"listen_address"`
-	Port          int    `json:"port"`
-}
-
-type BackendsByTrafficType map[TrafficType][]Backend
-type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
-
-func (b BoundBackend) URL() string {
-	return fmt.Sprintf("%s://%s:%v/1024.html", b.TrafficType.Scheme(), b.HostAddr, b.Port)
-}
-
-func Hostname() string {
+func mustResolveHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatal(err)
@@ -39,17 +19,16 @@ func Hostname() string {
 	return hostname
 }
 
-func HostIPAddress() net.IP {
+func mustResolveHostIP() string {
 	// TODO; we want anything but 127.0.0.1 || ::1 returned.
 	conn, err := net.Dial("udp", "8.8.8.8:53")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer func(conn net.Conn) {
 		_ = conn.Close()
 	}(conn)
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP
+	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
 
 func createFile(path string, data []byte) error {

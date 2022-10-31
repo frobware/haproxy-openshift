@@ -5,7 +5,7 @@ import (
 )
 
 func (c *GenHostsCmd) Run(p *ProgramCtx) error {
-	addr := HostIPAddress().String()
+	addr := mustResolveHostIP()
 	if c.IP != "" {
 		addr = c.IP
 	}
