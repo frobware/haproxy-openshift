@@ -139,15 +139,15 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	return c.generateMBTestScenarios(p)
+	return nil
 }
 
 func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxyBackendConfig, certFile string) error {
 	config := HAProxyGlobalConfig{
 		Backends:             backends,
 		Certificate:          certFile,
-		HTTPPort:             c.HTTPPort,
-		HTTPSPort:            c.HTTPSPort,
+		HTTPPort:             p.HTTPPort,
+		HTTPSPort:            p.HTTPSPort,
 		ListenAddress:        c.ListenAddress,
 		Maxconn:              c.Maxconn,
 		Nbthread:             c.Nthreads,

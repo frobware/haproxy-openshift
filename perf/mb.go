@@ -39,19 +39,30 @@ func filterInTrafficByType(types []TrafficType, backendsMap BoundBackendsByTraff
 	return result
 }
 
-func (c *GenProxyConfigCmd) generateMBRequests(cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
+func (c *GenWorkloadCmd) generateMBRequests(p *ProgramCtx, cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
 	var requests []MBRequest
 
-	port := func(t TrafficType) int {
-		switch t {
+	port := func(b BoundBackend, useProxy bool) int {
+		if !c.UseProxy {
+			return b.Port
+		}
+		switch b.TrafficType {
 		case HTTPTraffic:
-			return c.HTTPPort
+			return p.HTTPPort
 		default:
-			return c.HTTPSPort
+			return p.HTTPSPort
 		}
 	}
 
 	scheme := func(t TrafficType) string {
+		if !c.UseProxy {
+			switch t {
+			case HTTPTraffic, EdgeTraffic:
+				return "http"
+			default:
+				return "https"
+			}
+		}
 		switch t {
 		case HTTPTraffic:
 			return "http"
@@ -67,7 +78,7 @@ func (c *GenProxyConfigCmd) generateMBRequests(cfg MBRequestConfig, backends []B
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
-			Port:              port(b.TrafficType),
+			Port:              port(b, false),
 			Scheme:            scheme(b.TrafficType),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
 		})
@@ -76,7 +87,7 @@ func (c *GenProxyConfigCmd) generateMBRequests(cfg MBRequestConfig, backends []B
 	return requests
 }
 
-func (c *GenProxyConfigCmd) generateMBTestScenarios(p *ProgramCtx) error {
+func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 	if err := os.RemoveAll(path.Join(p.OutputDir, "mb")); err != nil {
 		return err
 	}
@@ -100,10 +111,10 @@ func (c *GenProxyConfigCmd) generateMBTestScenarios(p *ProgramCtx) error {
 			config := MBRequestConfig{
 				Clients:           len(backendsByTrafficType[EdgeTraffic]),
 				KeepAliveRequests: keepAliveRequests,
-				TLSSessionReuse:   c.TLSReuse,
+				TLSSessionReuse:   p.TLSReuse,
 				TrafficTypes:      scenario.TrafficTypes,
 			}
-			requests := c.generateMBRequests(config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
+			requests := c.generateMBRequests(p, config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
 			data, err := json.MarshalIndent(requests, "", "  ")
 			if err != nil {
 				return err
