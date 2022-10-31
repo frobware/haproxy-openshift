@@ -1,3 +1,6 @@
 # github.com/alecthomas/kong v0.7.0
 ## explicit; go 1.18
 github.com/alecthomas/kong
+# golang.org/x/sync v0.1.0
+## explicit
+golang.org/x/sync/errgroup

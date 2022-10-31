@@ -33,29 +33,24 @@ func main() {
 		},
 	)
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		defer cancel()
-		s := <-sigc
-		if cli.Globals.Debug {
-			log.Printf("exiting on signal %v\n", s)
-		}
-		os.Exit(0)
-	}()
+	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	if v, ok := os.LookupEnv("DISCOVERY_URL"); ok && v != "" {
 		cli.Globals.DiscoveryURL = v
 	}
 
-	// This is to make paths in haproxy.config absolute.
+	// This is to make paths emitted in the haproxy.config
+	// absolute which helps with certificates.
 	absPath, err := filepath.Abs(cli.Globals.OutputDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	cli.Globals.OutputDir = absPath
 
-	ktx.FatalIfErrorf(ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: ctx}))
+	if err := ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: signalCtx}); err != nil {
+		log.Fatal(err)
+	}
+
+	os.Exit(0)
 }

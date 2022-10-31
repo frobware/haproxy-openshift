@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +14,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Backend struct {
@@ -29,131 +33,9 @@ type BoundBackend struct {
 type BackendsByTrafficType map[TrafficType][]Backend
 type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
-func serveBackendMetadata(certBundle *Certificates, backendsByTrafficType BackendsByTrafficType, port int, postNotifier func(b BoundBackend)) {
-	// Provide synchronous access to the asynchronously registered
-	// port number for a backend.
-	var registeredBackends sync.Map
-
-	printBackendsForType := func(w io.Writer, t TrafficType) error {
-		for _, b := range backendsByTrafficType[t] {
-			obj, ok := registeredBackends.Load(b.Name)
-			if !ok {
-				panic("missing backend registration for" + b.Name)
-			}
-			boundBackend, ok := obj.(BoundBackend)
-			if !ok {
-				panic(fmt.Sprintf("unexpected type: %T", obj))
-			}
-			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v\n", b.Name, boundBackend.ListenAddress, boundBackend.Port)); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	mux := http.NewServeMux()
-
-	var mu sync.Mutex
-
-	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		mu.Lock()
-		defer mu.Unlock()
-		if r.Method != "POST" {
-			http.Error(w, r.Method, http.StatusBadRequest)
-		}
-		decoder := json.NewDecoder(r.Body)
-		decoder.DisallowUnknownFields()
-		var boundBackend BoundBackend
-		if err := decoder.Decode(&boundBackend); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		registeredBackends.Store(boundBackend.Name, boundBackend)
-		postNotifier(boundBackend)
-	})
-
-	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
-		data, err := json.MarshalIndent(certBundle, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if _, err := io.WriteString(w, string(data)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	})
-
-	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.URL.Query()["json"]; ok {
-			var boundBackendsByTrafficType = BoundBackendsByTrafficType{}
-
-			for _, t := range AllTrafficTypes {
-				for _, b := range backendsByTrafficType[t] {
-					obj, ok := registeredBackends.Load(b.Name)
-					if !ok {
-						panic("missing registration for" + b.Name)
-					}
-					boundBackend, ok := obj.(BoundBackend)
-					if !ok {
-						panic(fmt.Sprintf("unexpected type: %T", obj))
-					}
-					boundBackendsByTrafficType[t] = append(boundBackendsByTrafficType[t],
-						BoundBackend{
-							Backend:       b,
-							Port:          boundBackend.Port,
-							ListenAddress: boundBackend.ListenAddress,
-						})
-				}
-			}
-			data, err := json.MarshalIndent(boundBackendsByTrafficType, "", "  ")
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			if _, err := io.WriteString(w, string(data)); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		} else {
-			for _, t := range AllTrafficTypes {
-				if err := printBackendsForType(w, t); err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-				}
-			}
-		}
-	})
-
-	mux.HandleFunc("/backends/edge", func(w http.ResponseWriter, r *http.Request) {
-		if err := printBackendsForType(w, EdgeTraffic); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	})
-
-	mux.HandleFunc("/backends/http", func(w http.ResponseWriter, r *http.Request) {
-		if err := printBackendsForType(w, HTTPTraffic); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	})
-
-	mux.HandleFunc("/backends/passthrough", func(w http.ResponseWriter, r *http.Request) {
-		if err := printBackendsForType(w, PassthroughTraffic); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	})
-
-	mux.HandleFunc("/backends/reencrypt", func(w http.ResponseWriter, r *http.Request) {
-		if err := printBackendsForType(w, ReencryptTraffic); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-	})
-
-	if err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%v", port), mux); err != nil {
-		log.Fatal(err)
-	}
-}
-
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
+	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), mustResolveHostIP()))
+
 	if err := os.RemoveAll(path.Join(p.OutputDir, "certs")); err != nil {
 		return err
 	}
@@ -167,7 +49,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		"::1",
 	}
 
-	backendsByTrafficType := BackendsByTrafficType{}
+	var backendsByTrafficType = BackendsByTrafficType{}
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
@@ -180,17 +62,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), mustResolveHostIP()))
-
-	go func() {
-		// if a backend exits then exit everything as
-		// something unexpected occurred.
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc, syscall.SIGCHLD)
-		log.Println(<-sigc)
-		os.Exit(1)
-	}()
-
 	r, w, err := os.Pipe()
 	if err != nil {
 		return err
@@ -198,9 +69,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	defer func(r *os.File) { _ = r.Close() }(r)
 	defer func(w *os.File) { _ = w.Close() }(w)
-
-	var backendsReady = make(chan bool)
-	var backendsRegistered = 0
 
 	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAltNames...)
 	if err != nil {
@@ -211,11 +79,64 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	go serveBackendMetadata(certBundle, backendsByTrafficType, p.Port, func(b BoundBackend) {
+	g, gCtx := errgroup.WithContext(p.Context)
+
+	var (
+		backendsReady       = make(chan bool)
+		backendsRegistered  = 0
+		boundBackends       sync.Map
+		registerHandlerLock sync.Mutex
+	)
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		registerHandlerLock.Lock()
+		defer registerHandlerLock.Unlock()
+		if r.Method != "POST" {
+			http.Error(w, r.Method, http.StatusBadRequest)
+		}
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		var boundBackend BoundBackend
+		if err := decoder.Decode(&boundBackend); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		boundBackends.Store(boundBackend.Name, boundBackend)
 		backendsRegistered += 1
 		if backendsRegistered == len(backendsByTrafficType)*p.Nbackends {
 			backendsReady <- true
-			return
+		}
+	})
+
+	httpServer := &http.Server{
+		Handler:      mux,
+		Addr:         fmt.Sprintf("0.0.0.0:%v", p.Port),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+	}
+
+	g.Go(func() error {
+		return httpServer.ListenAndServe()
+	})
+
+	g.Go(func() error {
+		<-gCtx.Done()
+		httpServer.SetKeepAlivesEnabled(false)
+		shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), httpServer.WriteTimeout)
+		defer shutdownRelease()
+		return httpServer.Shutdown(shutdownCtx)
+	})
+
+	g.Go(func() error {
+		signalCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGCHLD)
+		defer stop()
+		select {
+		case <-signalCtx.Done():
+			return fmt.Errorf("a backend died")
+		case <-gCtx.Done():
+			return nil
 		}
 	})
 
@@ -242,7 +163,81 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	<-backendsReady
 	log.Printf("%d backends registered", backendsRegistered)
-	log.Printf("metadata server running at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
-	<-p.Context.Done()
+	log.Printf("metadata server available at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
+
+	printBackendsForType := func(w io.Writer, t TrafficType) error {
+		for _, b := range backendsByTrafficType[t] {
+			obj, ok := boundBackends.Load(b.Name)
+			if !ok {
+				panic("missing backend registration for" + b.Name)
+			}
+			boundBackend, ok := obj.(BoundBackend)
+			if !ok {
+				panic(fmt.Sprintf("unexpected type: %T", obj))
+			}
+			if _, err := io.WriteString(w, fmt.Sprintf("%v %v %v\n", b.Name, boundBackend.ListenAddress, boundBackend.Port)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(certBundle, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	})
+
+	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.URL.Query()["json"]; !ok {
+			for _, t := range AllTrafficTypes {
+				if err := printBackendsForType(w, t); err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+				}
+			}
+			return
+		}
+
+		var boundBackendsByTrafficType = BoundBackendsByTrafficType{}
+
+		for _, t := range AllTrafficTypes {
+			for _, b := range backendsByTrafficType[t] {
+				obj, ok := boundBackends.Load(b.Name)
+				if !ok {
+					panic("missing registration for" + b.Name)
+				}
+				boundBackend, ok := obj.(BoundBackend)
+				if !ok {
+					panic(fmt.Sprintf("unexpected type: %T", obj))
+				}
+				boundBackendsByTrafficType[t] = append(boundBackendsByTrafficType[t],
+					BoundBackend{
+						Backend:       b,
+						Port:          boundBackend.Port,
+						ListenAddress: boundBackend.ListenAddress,
+					})
+			}
+		}
+		data, err := json.MarshalIndent(boundBackendsByTrafficType, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	})
+
+	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+
 	return nil
 }
