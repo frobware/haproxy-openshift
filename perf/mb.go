@@ -29,7 +29,17 @@ type MBRequestConfig struct {
 	TrafficTypes      []TrafficType
 }
 
-func (c *GenWorkloadCmd) generateWorkloadRequests(cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
+func filterInTrafficByType(types []TrafficType, backendsMap BoundBackendsByTrafficType) []BoundBackend {
+	var result []BoundBackend
+
+	for _, t := range types {
+		result = append(result, backendsMap[t]...)
+	}
+
+	return result
+}
+
+func generateMBRequests(cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
 	var requests []MBRequest
 
 	for _, b := range backends {
@@ -48,17 +58,7 @@ func (c *GenWorkloadCmd) generateWorkloadRequests(cfg MBRequestConfig, backends 
 	return requests
 }
 
-func filterInTrafficByType(types []TrafficType, backendsMap BoundBackendsByTrafficType) []BoundBackend {
-	var result []BoundBackend
-
-	for _, t := range types {
-		result = append(result, backendsMap[t]...)
-	}
-
-	return result
-}
-
-func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
+func generateMBTestScenarios(p *ProgramCtx, tlsSessionReuse bool) error {
 	if err := os.RemoveAll(path.Join(p.OutputDir, "mb")); err != nil {
 		return err
 	}
@@ -82,10 +82,10 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 			config := MBRequestConfig{
 				Clients:           int64(len(backendsByTrafficType[EdgeTraffic])),
 				KeepAliveRequests: keepAliveRequests,
-				TLSSessionReuse:   c.TLSReuse,
+				TLSSessionReuse:   tlsSessionReuse,
 				TrafficTypes:      scenario.TrafficTypes,
 			}
-			requests := c.generateWorkloadRequests(config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
+			requests := generateMBRequests(config, filterInTrafficByType(scenario.TrafficTypes, backendsByTrafficType))
 			data, err := json.MarshalIndent(requests, "", "  ")
 			if err != nil {
 				return err

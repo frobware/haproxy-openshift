@@ -15,10 +15,6 @@ type GenHostsCmd struct {
 	IPAddress string
 }
 
-type GenWorkloadCmd struct {
-	TLSReuse bool `default:"true"`
-}
-
 type ServeBackendsCmd struct {
 	ListenAddress string `default:"127.0.0.1"`
 }
