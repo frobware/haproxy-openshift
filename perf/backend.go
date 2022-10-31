@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +14,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 //go:embed *.html
@@ -27,29 +31,40 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		listenAddress = "0.0.0.0"
 	}
 
-	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddress))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddress))
 	if err != nil {
 		return err
 	}
 
 	certs := certStore(path.Join(p.Globals.OutputDir, "certs"))
 
-	go func() {
+	httpServer := &http.Server{
+		Handler:      http.FileServer(http.FS(BackendFS)),
+		Addr:         fmt.Sprintf("%v:%v", listenAddress, p.Port),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+	}
+
+	g, gCtx := errgroup.WithContext(p.Context)
+
+	g.Go(func() error {
 		switch t {
 		case HTTPTraffic, EdgeTraffic:
-			if err := http.Serve(l, http.FileServer(http.FS(BackendFS))); err != nil {
-				log.Fatal(err)
-			}
+			return httpServer.Serve(listener)
 		default:
-			if err := http.ServeTLS(l, http.FileServer(http.FS(BackendFS)), certs.TLSCertFile, certs.TLSKeyFile); err != nil {
-				log.Fatal(err)
-			}
+			return httpServer.ServeTLS(listener, certs.DomainFile, certs.TLSKeyFile)
 		}
-	}()
+	})
+
+	g.Go(func() error {
+		<-gCtx.Done()
+		httpServer.SetKeepAlivesEnabled(false)
+		shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), httpServer.WriteTimeout)
+		defer shutdownRelease()
+		return httpServer.Shutdown(shutdownCtx)
+	})
 
 	if listenAddress == "0.0.0.0" {
-		// we're going to advertise this address so make it
-		// discoverable/routable.
 		listenAddress = mustResolveHostIP()
 	}
 
@@ -59,7 +74,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 			TrafficType: t,
 		},
 		ListenAddress: listenAddress,
-		Port:          l.Addr().(*net.TCPAddr).Port,
+		Port:          listener.Addr().(*net.TCPAddr).Port,
 	}
 
 	jsonValue, err := json.Marshal(boundBackend)
@@ -97,8 +112,15 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	_, _ = os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-	os.Exit(0) // the parent has exited we should too.
+	go func() {
+		_, _ = os.NewFile(3, "<pipe>").Read(make([]byte, 1))
+		// the parent disapperared so we bail out too.
+		httpServer.Shutdown(gCtx)
+	}()
+
+	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
 
 	return nil
 }
