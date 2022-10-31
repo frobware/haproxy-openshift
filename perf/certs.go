@@ -24,7 +24,7 @@ func certStore(certDir string) CertStore {
 	}
 }
 
-func writeCertificates(dir string, certBundle *Certificates) (*CertStore, error) {
+func writeCertificates(dir string, certs *Certificates) (*CertStore, error) {
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, err
 	}
@@ -36,29 +36,24 @@ func writeCertificates(dir string, certBundle *Certificates) (*CertStore, error)
 	certPath := certStore(dir)
 
 	domainPEM := strings.Join([]string{
-		strings.TrimSuffix(certBundle.LeafCertPEM, "\n"),
-		strings.TrimSuffix(certBundle.LeafKeyPEM, "\n"),
-		strings.TrimSuffix(certBundle.RootCACertPEM, "\n"),
+		strings.TrimSuffix(certs.LeafCertPEM, "\n"),
+		strings.TrimSuffix(certs.LeafKeyPEM, "\n"),
+		strings.TrimSuffix(certs.RootCACertPEM, "\n"),
 	}, "\n")
 
-	if err := createFile(certPath.DomainFile, []byte(strings.TrimSuffix(domainPEM, "\n"))); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.RootCAFile, []byte(certBundle.RootCACertPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.RootCAKeyFile, []byte(certBundle.RootCAKeyPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.TLSCertFile, []byte(certBundle.LeafCertPEM)); err != nil {
-		return nil, err
-	}
-
-	if err := createFile(certPath.TLSKeyFile, []byte(certBundle.LeafKeyPEM)); err != nil {
-		return nil, err
+	for _, cert := range []struct {
+		filename string
+		pemData  string
+	}{
+		{certPath.DomainFile, domainPEM},
+		{certPath.RootCAFile, certs.RootCACertPEM},
+		{certPath.RootCAKeyFile, certs.RootCAKeyPEM},
+		{certPath.TLSCertFile, certs.LeafCertPEM},
+		{certPath.TLSKeyFile, certs.LeafKeyPEM},
+	} {
+		if err := createFile(cert.filename, []byte(strings.TrimSuffix(cert.pemData, "\n"))); err != nil {
+			return nil, err
+		}
 	}
 
 	return &certPath, nil
