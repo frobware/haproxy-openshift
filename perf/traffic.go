@@ -35,7 +35,7 @@ func (t TrafficType) Port() int64 {
 	}
 }
 
-func ParseTrafficType(s string) TrafficType {
+func mustParseTrafficType(s string) TrafficType {
 	switch s {
 	case "http":
 		return HTTPTraffic

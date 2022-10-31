@@ -18,30 +18,11 @@ import (
 var BackendFS embed.FS
 
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
-	listenAddr, found := os.LookupEnv(ChildBackendListenAddress)
-	if !found {
-		return fmt.Errorf("%q not found in environment", ChildBackendListenAddress)
-	}
+	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), c.Name))
 
-	if listenAddr == "" || listenAddr == "127.0.0.1" || listenAddr == "::1" {
-		listenAddr = string(mustResolveHostIP())
-	}
+	var t = mustParseTrafficType(string(c.TrafficType))
 
-	backendName, found := os.LookupEnv(ChildBackendEnvName)
-	if !found {
-		return fmt.Errorf("%q not found in environment", ChildBackendEnvName)
-	}
-
-	trafficType, found := os.LookupEnv(ChildBackendTrafficTypeEnvName)
-	if !found {
-		return fmt.Errorf("%q not found in environment", ChildBackendTrafficTypeEnvName)
-	}
-
-	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), backendName))
-
-	var t = ParseTrafficType(trafficType)
-
-	l, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:0"))
+	l, err := net.Listen("tcp", fmt.Sprintf("%v:0", c.ListenAddress))
 	if err != nil {
 		return err
 	}
@@ -63,10 +44,10 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	boundBackend := BoundBackend{
 		Backend: Backend{
-			Name:        backendName,
+			Name:        c.Name,
 			TrafficType: t,
 		},
-		ListenAddress: listenAddr,
+		ListenAddress: c.ListenAddress,
 		Port:          l.Addr().(*net.TCPAddr).Port,
 	}
 

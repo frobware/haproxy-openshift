@@ -157,8 +157,6 @@ func serveBackendMetadata(certBundle *CertificateBundle, backendsByTrafficType B
 }
 
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
-	backendsByTrafficType := BackendsByTrafficType{}
-
 	if err := os.RemoveAll(path.Join(p.OutputDir, "certs")); err != nil {
 		return err
 	}
@@ -166,10 +164,13 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	var subjectAltNames = []string{
 		mustResolveHostname(),
 		mustResolveHostIP(),
+		c.ListenAddress,
 		"localhost",
 		"127.0.0.1",
 		"::1",
 	}
+
+	backendsByTrafficType := BackendsByTrafficType{}
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
@@ -229,29 +230,21 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		len(AllTrafficTypes)*p.Nbackends/len(AllTrafficTypes),
 		AllTrafficTypes)
 
-	for t, backends := range backendsByTrafficType {
+	listenAddress := c.ListenAddress
+	if listenAddress == "" || listenAddress == "127.0.0.1" || listenAddress == "::1" {
+		listenAddress = mustResolveHostIP()
+	}
+
+	for _, backends := range backendsByTrafficType {
 		for _, backend := range backends {
-			childEnv := []string{
-				fmt.Sprintf("%s=%v", ChildBackendEnvName, backend.Name),
-				fmt.Sprintf("%s=%v", ChildBackendListenAddress, c.ListenAddress),
-				fmt.Sprintf("%s=%v", ChildBackendTrafficTypeEnvName, t),
-			}
-			// We want to be a child of the current
-			// process so the following fork/exec needs to
-			// change the current program arguments so
-			// that the exec, and subsequent command line
-			// parsing, ensures we call serve-backend
-			// (singular) and not serve-backends (plural).
-			// Otherwise we'll end up back here.
 			newArgs := os.Args[:1]
 			newArgs = append(newArgs, []string{
 				"serve-backend",
-				fmt.Sprintf("--listen-address=%s", c.ListenAddress),
+				fmt.Sprintf("--listen-address=%s", listenAddress),
 				fmt.Sprintf("--name=%s", backend.Name),
 				fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
 			}...)
 			if _, err := syscall.ForkExec(os.Args[0], newArgs, &syscall.ProcAttr{
-				Env:   append(os.Environ(), childEnv...),
 				Files: []uintptr{0, 1, 2, r.Fd()},
 			}); err != nil {
 				return err
