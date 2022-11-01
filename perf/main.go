@@ -51,6 +51,4 @@ func main() {
 	if err := ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: signalCtx}); err != nil {
 		log.Fatal(err)
 	}
-
-	os.Exit(0)
 }

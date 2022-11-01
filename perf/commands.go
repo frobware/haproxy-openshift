@@ -52,9 +52,9 @@ type ServeBackendsCmd struct {
 }
 
 type ServeBackendCmd struct {
-	Name          string      `default:"<error>"`
-	ListenAddress string      `default:"<error>"`
-	TrafficType   TrafficType `default:"<error>"`
+	Name          string      `default:""`
+	ListenAddress string      `default:""`
+	TrafficType   TrafficType `default:""`
 }
 
 type VersionCmd struct{}

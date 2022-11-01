@@ -129,11 +129,12 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return httpServer.Shutdown(shutdownCtx)
 	})
 
+	chldSignalCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGCHLD)
+	defer stop()
+
 	g.Go(func() error {
-		signalCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGCHLD)
-		defer stop()
 		select {
-		case <-signalCtx.Done():
+		case <-chldSignalCtx.Done():
 			return fmt.Errorf("a backend died")
 		case <-gCtx.Done():
 			return nil
@@ -149,21 +150,29 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 			newArgs := os.Args[:1]
 			newArgs = append(newArgs, []string{
 				"serve-backend",
-				fmt.Sprintf("--listen-address=%s", c.ListenAddress),
 				fmt.Sprintf("--name=%s", backend.Name),
 				fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
 			}...)
-			if _, err := syscall.ForkExec(os.Args[0], newArgs, &syscall.ProcAttr{
+			if c.ListenAddress != "127.0.0.1" {
+				newArgs = append(newArgs, fmt.Sprintf("--listen-address=%s", c.ListenAddress))
+			}
+			if pid, err := syscall.ForkExec(os.Args[0], newArgs, &syscall.ProcAttr{
 				Files: []uintptr{0, 1, 2, r.Fd()},
 			}); err != nil {
 				return err
+			} else {
+				go syscall.Wait4(pid, nil, 0, nil)
 			}
 		}
 	}
 
-	<-backendsReady
-	log.Printf("%d backends registered", backendsRegistered)
-	log.Printf("metadata server available at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
+	select {
+	case <-backendsReady:
+	case <-gCtx.Done():
+		return nil
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("timeout waiting for backends to register")
+	}
 
 	printBackendsForType := func(w io.Writer, t TrafficType) error {
 		for _, b := range backendsByTrafficType[t] {
@@ -234,6 +243,9 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 			return
 		}
 	})
+
+	log.Printf("%d backends registered", backendsRegistered)
+	log.Printf("metadata server available at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
 
 	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

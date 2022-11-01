@@ -22,7 +22,7 @@ import (
 var BackendFS embed.FS
 
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
-	log.SetPrefix(fmt.Sprintf("[c %v %s] ", os.Getpid(), c.Name))
+	log.SetPrefix(fmt.Sprintf("[c %v %v %s] ", os.Getpid(), mustResolveHostIP(), c.Name))
 
 	var t = mustParseTrafficType(string(c.TrafficType))
 
@@ -113,8 +113,11 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	}
 
 	go func() {
-		_, _ = os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-		// the parent disapperared so we bail out too.
+		_, err := os.NewFile(3, "<pipe>").Read(make([]byte, 1))
+		if err != nil && !errors.Is(err, io.EOF) {
+			return
+		}
+		// the parent closed its end of the pipe
 		httpServer.Shutdown(gCtx)
 	}()
 
