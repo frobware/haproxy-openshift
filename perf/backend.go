@@ -24,6 +24,12 @@ var BackendFS embed.FS
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	log.SetPrefix(fmt.Sprintf("[c %v %v %s] ", os.Getpid(), mustResolveHostIP(), c.Name))
 
+	go func() {
+		os.NewFile(3, "<pipe>").Read(make([]byte, 1))
+		// the parent closed its end of the pipe
+		os.Exit(1)
+	}()
+
 	var t = mustParseTrafficType(string(c.TrafficType))
 
 	listenAddress := c.ListenAddress
