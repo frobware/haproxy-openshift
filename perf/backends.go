@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path"
 	"sync"
@@ -32,6 +33,27 @@ type BoundBackend struct {
 
 type BackendsByTrafficType map[TrafficType][]Backend
 type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
+
+func (c *ServeBackendsCmd) spawnBackend(backend Backend, r *os.File) error {
+	newArgs := []string{
+		"serve-backend",
+		fmt.Sprintf("--name=%s", backend.Name),
+		fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
+	}
+	if c.ListenAddress != "127.0.0.1" {
+		newArgs = append(newArgs, fmt.Sprintf("--listen-address=%s", c.ListenAddress))
+	}
+	cmd := exec.Command(os.Args[0], newArgs...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.ExtraFiles = []*os.File{r}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	go cmd.Wait()
+	return nil
+}
 
 func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	log.SetPrefix(fmt.Sprintf("[P %v] %v ", os.Getpid(), mustResolveHostIP()))
@@ -147,21 +169,8 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	for _, backends := range backendsByTrafficType {
 		for _, backend := range backends {
-			newArgs := os.Args[:1]
-			newArgs = append(newArgs, []string{
-				"serve-backend",
-				fmt.Sprintf("--name=%s", backend.Name),
-				fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
-			}...)
-			if c.ListenAddress != "127.0.0.1" {
-				newArgs = append(newArgs, fmt.Sprintf("--listen-address=%s", c.ListenAddress))
-			}
-			if pid, err := syscall.ForkExec(os.Args[0], newArgs, &syscall.ProcAttr{
-				Files: []uintptr{0, 1, 2, r.Fd()},
-			}); err != nil {
+			if err := c.spawnBackend(backend, r); err != nil {
 				return err
-			} else {
-				go syscall.Wait4(pid, nil, 0, nil)
 			}
 		}
 	}
