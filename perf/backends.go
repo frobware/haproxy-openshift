@@ -79,8 +79,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	g, gCtx := errgroup.WithContext(p.Context)
-
 	var (
 		backendsReady       = make(chan bool)
 		backendsRegistered  = 0
@@ -89,6 +87,13 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	)
 
 	mux := http.NewServeMux()
+
+	httpServer := &http.Server{
+		Handler:      mux,
+		Addr:         fmt.Sprintf("0.0.0.0:%v", p.Port),
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+	}
 
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		registerHandlerLock.Lock()
@@ -110,12 +115,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	httpServer := &http.Server{
-		Handler:      mux,
-		Addr:         fmt.Sprintf("0.0.0.0:%v", p.Port),
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-	}
+	g, gCtx := errgroup.WithContext(p.Context)
 
 	g.Go(func() error {
 		return httpServer.ListenAndServe()
