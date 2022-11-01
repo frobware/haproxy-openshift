@@ -113,10 +113,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	}
 
 	go func() {
-		_, err := os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-		if err != nil && !errors.Is(err, io.EOF) {
-			return
-		}
+		os.NewFile(3, "<pipe>").Read(make([]byte, 1))
 		// the parent closed its end of the pipe
 		httpServer.Shutdown(gCtx)
 	}()
