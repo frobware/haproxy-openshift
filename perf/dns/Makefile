@@ -3,7 +3,7 @@ CFLAGS ?= -ggdb3 -O0 -Og -Wall -Wextra -Werror -fPIC -D_GNU_SOURCE -fno-omit-fra
 all: libmydns.so
 
 libmydns.so: getaddrinfo-interposer.o
-	$(CC) $(CFLAGS) -W -shared -Wl,-soname,$@ -Wl,--no-as-needed -o $@ -ldl $<
+	$(CC) $(CFLAGS) -W -shared -Wl,-soname,$@ -Wl,--no-as-needed -o $@ $^ -ldl
 
 getaddrinfo-interposer.o: Makefile
 
