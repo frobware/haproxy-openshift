@@ -24,12 +24,6 @@ var BackendFS embed.FS
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	log.SetPrefix(fmt.Sprintf("[c %v %v %s] ", os.Getpid(), mustResolveHostIP(), c.Name))
 
-	go func() {
-		os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-		// the parent closed its end of the pipe
-		os.Exit(1)
-	}()
-
 	var t = mustParseTrafficType(string(c.TrafficType))
 
 	listenAddress := c.ListenAddress
@@ -97,7 +91,8 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		resp, err = http.Post(fmt.Sprintf("http://127.0.0.1:%d/register", p.Port), "application/json", bytes.NewBuffer(jsonValue))
 		if err != nil {
 			retries -= 1
-			time.Sleep(time.Duration(42) * time.Millisecond)
+			log.Printf("#%v retries remaining", retries)
+			time.Sleep(250 * time.Millisecond)
 		} else {
 			break
 		}
@@ -107,22 +102,16 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("POST failed for %+v: %v\n", boundBackend, err)
 	}
 
-	defer func(Body io.ReadCloser) { _ = Body.Close() }(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
-	}
+	defer resp.Body.Close()
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	go func() {
-		os.NewFile(3, "<pipe>").Read(make([]byte, 1))
-		// the parent closed its end of the pipe
-		httpServer.Shutdown(gCtx)
-	}()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
+	}
 
 	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

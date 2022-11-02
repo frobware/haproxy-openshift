@@ -34,7 +34,7 @@ type BoundBackend struct {
 type BackendsByTrafficType map[TrafficType][]Backend
 type BoundBackendsByTrafficType map[TrafficType][]BoundBackend
 
-func (c *ServeBackendsCmd) spawnBackend(backend Backend, r *os.File) error {
+func (c *ServeBackendsCmd) spawnBackend(ctx context.Context, backend Backend) error {
 	newArgs := []string{
 		"serve-backend",
 		fmt.Sprintf("--name=%s", backend.Name),
@@ -47,7 +47,9 @@ func (c *ServeBackendsCmd) spawnBackend(backend Backend, r *os.File) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.ExtraFiles = []*os.File{r}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGTERM,
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -62,50 +64,12 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	var subjectAltNames = []string{
-		mustResolveHostname(),
-		mustResolveHostIP(),
-		c.ListenAddress,
-		"localhost",
-		"127.0.0.1",
-		"::1",
-	}
-
-	var backendsByTrafficType = BackendsByTrafficType{}
-
-	for _, t := range AllTrafficTypes {
-		for i := 0; i < p.Nbackends; i++ {
-			backend := Backend{
-				Name:        fmt.Sprintf("%s-%v-%v", p.HostPrefix, t, i),
-				TrafficType: t,
-			}
-			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
-			subjectAltNames = append(subjectAltNames, backend.Name)
-		}
-	}
-
-	r, w, err := os.Pipe()
-	if err != nil {
-		return err
-	}
-
-	defer func(r *os.File) { _ = r.Close() }(r)
-	defer func(w *os.File) { _ = w.Close() }(w)
-
-	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAltNames...)
-	if err != nil {
-		return fmt.Errorf("failed to generate certificates: %v", err)
-	}
-
-	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
-		return err
-	}
-
 	var (
-		backendsReady       = make(chan bool)
-		backendsRegistered  = 0
-		boundBackends       sync.Map
-		registerHandlerLock sync.Mutex
+		backendsByTrafficType = BackendsByTrafficType{}
+		backendsReady         = make(chan bool)
+		backendsRegistered    = 0
+		boundBackends         sync.Map
+		registerHandlerLock   sync.Mutex
 	)
 
 	mux := http.NewServeMux()
@@ -115,6 +79,37 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		Addr:         fmt.Sprintf("0.0.0.0:%v", p.Port),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
+	}
+
+	g, gCtx := errgroup.WithContext(p.Context)
+	chldSignalCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGCHLD)
+	defer stop()
+
+	g.Go(func() error {
+		select {
+		case <-chldSignalCtx.Done():
+			return fmt.Errorf("a backend died")
+		case <-gCtx.Done():
+			return nil
+		}
+	})
+
+	var subjectAltNames = []string{
+		mustResolveHostname(),
+		mustResolveHostIP(),
+		c.ListenAddress,
+		"localhost",
+		"127.0.0.1",
+		"::1",
+	}
+
+	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAltNames...)
+	if err != nil {
+		return fmt.Errorf("failed to generate certificates: %v", err)
+	}
+
+	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
+		return err
 	}
 
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +132,17 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	g, gCtx := errgroup.WithContext(p.Context)
+	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(certBundle, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	})
 
 	g.Go(func() error {
 		return httpServer.ListenAndServe()
@@ -151,25 +156,21 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return httpServer.Shutdown(shutdownCtx)
 	})
 
-	chldSignalCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGCHLD)
-	defer stop()
-
-	g.Go(func() error {
-		select {
-		case <-chldSignalCtx.Done():
-			return fmt.Errorf("a backend died")
-		case <-gCtx.Done():
-			return nil
+	for _, t := range AllTrafficTypes {
+		for i := 0; i < p.Nbackends; i++ {
+			backend := Backend{
+				Name:        fmt.Sprintf("%s-%v-%v", p.HostPrefix, t, i),
+				TrafficType: t,
+			}
+			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
+			subjectAltNames = append(subjectAltNames, backend.Name)
 		}
-	})
+	}
 
-	log.Printf("starting %d backends for traffic types: %v\n",
-		len(AllTrafficTypes)*p.Nbackends/len(AllTrafficTypes),
-		AllTrafficTypes)
-
-	for _, backends := range backendsByTrafficType {
+	for t, backends := range backendsByTrafficType {
+		log.Printf("starting %d %s backend(s)\n", p.Nbackends, t)
 		for _, backend := range backends {
-			if err := c.spawnBackend(backend, r); err != nil {
+			if err := c.spawnBackend(p.Context, backend); err != nil {
 				return err
 			}
 		}
@@ -177,9 +178,10 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	select {
 	case <-backendsReady:
+		log.Printf("%d backend(s) processes registered", len(AllTrafficTypes)*p.Nbackends)
 	case <-gCtx.Done():
 		return nil
-	case <-time.After(5 * time.Second):
+	case <-time.After(15 * time.Second):
 		return fmt.Errorf("timeout waiting for backends to register")
 	}
 
@@ -199,18 +201,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 		return nil
 	}
-
-	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
-		data, err := json.MarshalIndent(certBundle, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if _, err := io.WriteString(w, string(data)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.URL.Query()["json"]; !ok {
@@ -253,7 +243,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	log.Printf("%d backends registered", backendsRegistered)
 	log.Printf("metadata server available at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
 
 	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
