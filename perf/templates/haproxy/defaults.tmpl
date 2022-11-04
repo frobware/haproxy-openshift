@@ -182,4 +182,11 @@ backend openshift_default
   #option http-keep-alive
   option http-pretend-keepalive
 
+frontend public_ssl_reencrypt_nohop
+  bind {{.ListenAddress}}:9443 ssl crt {{.Certificate}} crt-list {{.OutputDir}}/haproxy/cert_config.map
+  tcp-request inspect-delay 5s
+  tcp-request content accept if { req_ssl_hello_type 1 }
+  use_backend %[base,map_reg({{.OutputDir}}/haproxy/os_edge_reencrypt_be.map)]
+  default_backend openshift_default
+
 ##-------------- app level backends ----------------"
