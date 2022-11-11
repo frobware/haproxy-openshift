@@ -1,0 +1,16 @@
+---
+- import_playbook: ./playbooks/rhel-subscribe.yaml
+- import_playbook: ./playbooks/selinux.yaml
+- import_playbook: ./playbooks/tools.yaml
+- import_playbook: ./playbooks/update-packages.yaml
+- import_playbook: ./playbooks/sshd.yaml
+- import_playbook: ./playbooks/nofile.yaml
+- import_playbook: ./playbooks/autofs.yaml
+- import_playbook: ./playbooks/change-uid-cloud-user.yaml
+- import_playbook: ./playbooks/reboot.yaml
+- import_playbook: ./playbooks/user-aim.yaml
+- import_playbook: ./playbooks/hushlogin.yaml
+  
+  
+  
+

@@ -1,0 +1,10 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: register with Red Hat subscription-manager and auto-subscribe to available content.
+    community.general.redhat_subscription:
+      state: present
+      username: "{{ username }}"
+      password: "{{ password }}"
+      auto_attach: true

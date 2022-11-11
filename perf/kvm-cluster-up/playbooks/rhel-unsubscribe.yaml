@@ -1,0 +1,6 @@
+---
+- hosts: all
+  tasks:
+  - name: unregister with subscription-manager
+    community.general.redhat_subscription:
+      state: absent

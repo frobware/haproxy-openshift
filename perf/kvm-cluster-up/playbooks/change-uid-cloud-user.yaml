@@ -1,0 +1,11 @@
+---
+- hosts: all
+  tasks:
+  - name: Change cloud-user gid
+    ansible.builtin.group:
+      name: cloud-user
+      gid: 1010
+  - name: Change cloud-user uid
+    ansible.builtin.user:
+      name: cloud-user
+      uid: 1010
