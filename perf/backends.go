@@ -94,24 +94,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	var subjectAltNames = []string{
-		mustResolveHostname(),
-		mustResolveHostIP(),
-		c.ListenAddress,
-		"localhost",
-		"127.0.0.1",
-		"::1",
-	}
-
-	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAltNames...)
-	if err != nil {
-		return fmt.Errorf("failed to generate certificates: %v", err)
-	}
-
-	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
-		return err
-	}
-
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		registerHandlerLock.Lock()
 		defer registerHandlerLock.Unlock()
@@ -132,18 +114,6 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
-		data, err := json.MarshalIndent(certBundle, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if _, err := io.WriteString(w, string(data)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	})
-
 	g.Go(func() error {
 		return httpServer.ListenAndServe()
 	})
@@ -156,6 +126,15 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return httpServer.Shutdown(shutdownCtx)
 	})
 
+	var subjectAlternateNames = []string{
+		mustResolveHostname(),
+		mustResolveHostIP(),
+		c.ListenAddress,
+		"localhost",
+		"127.0.0.1",
+		"::1",
+	}
+
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
 			backend := Backend{
@@ -163,8 +142,18 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 				TrafficType: t,
 			}
 			backendsByTrafficType[t] = append(backendsByTrafficType[t], backend)
-			subjectAltNames = append(subjectAltNames, backend.Name)
+			subjectAlternateNames = append(subjectAlternateNames, backend.Name)
 		}
+	}
+
+	// Create certificates after we know all the backend names.
+	certBundle, err := CreateTLSCerts(time.Now(), time.Now().AddDate(1, 0, 0), subjectAlternateNames...)
+	if err != nil {
+		return fmt.Errorf("failed to generate certificates: %v", err)
+	}
+
+	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
+		return err
 	}
 
 	for t, backends := range backendsByTrafficType {
@@ -201,6 +190,18 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 		return nil
 	}
+
+	mux.HandleFunc("/certs", func(w http.ResponseWriter, r *http.Request) {
+		data, err := json.MarshalIndent(certBundle, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if _, err := io.WriteString(w, string(data)); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	})
 
 	mux.HandleFunc("/backends", func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.URL.Query()["json"]; !ok {

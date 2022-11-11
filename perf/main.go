@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -50,5 +51,9 @@ func main() {
 
 	if err := ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: signalCtx}); err != nil {
 		log.Fatal(err)
+	}
+
+	if cli.Globals.Debug {
+		log.Println("number of goroutines:", runtime.NumGoroutine())
 	}
 }

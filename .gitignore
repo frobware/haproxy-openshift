@@ -1,3 +1,10 @@
 /rhsm.conf
 /ca/
 /pki/
+/perf/perf-test-hydra
+/perf/cmd/perf-test-hydra/commit.txt
+*.pem
+/perf/certs/
+tls.*
+/perf/perf
+/perf/testrun/

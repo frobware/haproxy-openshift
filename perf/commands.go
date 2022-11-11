@@ -1,6 +1,9 @@
 package main
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Globals struct {
 	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
@@ -18,17 +21,23 @@ type Globals struct {
 type CLI struct {
 	Globals
 
-	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
 	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
+	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
 	GenWorkload    GenWorkloadCmd    `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
 	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`
 	ServeBackends  ServeBackendsCmd  `cmd:"" help:"Serve backends."`
+	Test           TestCmd           `cmd:"" help:"Run client test using requests file."`
 	Version        VersionCmd        `cmd:"" help:"Print version information and quit."`
 }
 
 type ProgramCtx struct {
 	Context context.Context
 	Globals
+}
+
+type TestCmd struct {
+	Duration    time.Duration `help:"Test duration" short:"d" default:"60s"`
+	RequestFile string        `help:"Request file." short:"i" type:"existingfile"`
 }
 
 type GenProxyConfigCmd struct {
