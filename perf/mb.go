@@ -92,37 +92,39 @@ func generateMBRequests(p *ProgramCtx, useProxy bool, cfg MBRequestConfig, backe
 }
 
 func writeRequests(p *ProgramCtx, basedir string, tlsSessionReuse bool, category string, useProxy bool, backendsByTrafficType BoundBackendsByTrafficType) error {
-	for _, requestCfg := range []struct {
-		Name         string
-		TrafficTypes []TrafficType
-	}{
-		{"edge", []TrafficType{EdgeTraffic}},
-		{"http", []TrafficType{HTTPTraffic}},
-		{"mix", AllTrafficTypes[:]},
-		{"passthrough", []TrafficType{PassthroughTraffic}},
-		{"reencrypt", []TrafficType{ReencryptTraffic}},
-	} {
-		for _, keepAliveRequests := range []int{0} {
-			config := MBRequestConfig{
-				Clients:           len(backendsByTrafficType[EdgeTraffic]),
-				KeepAliveRequests: keepAliveRequests,
-				TLSSessionReuse:   tlsSessionReuse,
-				TrafficTypes:      requestCfg.TrafficTypes,
-			}
-			requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(requestCfg.TrafficTypes, backendsByTrafficType))
-			data, err := json.MarshalIndent(requests, "", "  ")
-			if err != nil {
-				return err
-			}
-			filepath := fmt.Sprintf("%s/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v.json",
-				basedir,
-				category,
-				requestCfg.Name,
-				len(requests)/len(config.TrafficTypes),
-				config.Clients,
-				config.KeepAliveRequests)
-			if err := createFile(filepath, data); err != nil {
-				return fmt.Errorf("error generating %s: %v", filepath, err)
+	for _, clients := range []int{1, 50, 60, 70, 75, 80, 90, 100, 200} {
+		for _, requestCfg := range []struct {
+			Name         string
+			TrafficTypes []TrafficType
+		}{
+			{"edge", []TrafficType{EdgeTraffic}},
+			{"http", []TrafficType{HTTPTraffic}},
+			{"mix", AllTrafficTypes[:]},
+			{"passthrough", []TrafficType{PassthroughTraffic}},
+			{"reencrypt", []TrafficType{ReencryptTraffic}},
+		} {
+			for _, keepAliveRequests := range []int{0} {
+				config := MBRequestConfig{
+					Clients:           clients,
+					KeepAliveRequests: keepAliveRequests,
+					TLSSessionReuse:   tlsSessionReuse,
+					TrafficTypes:      requestCfg.TrafficTypes,
+				}
+				requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(requestCfg.TrafficTypes, backendsByTrafficType))
+				data, err := json.MarshalIndent(requests, "", "  ")
+				if err != nil {
+					return err
+				}
+				filepath := fmt.Sprintf("%s/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v.json",
+					basedir,
+					category,
+					requestCfg.Name,
+					len(requests),
+					config.Clients,
+					config.KeepAliveRequests)
+				if err := createFile(filepath, data); err != nil {
+					return fmt.Errorf("error generating %s: %v", filepath, err)
+				}
 			}
 		}
 	}
