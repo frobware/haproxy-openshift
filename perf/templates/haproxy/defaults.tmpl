@@ -51,6 +51,9 @@ frontend public
 # determined by the next backend in the chain which may be an app backend (passthrough termination) or a backend
 # that terminates encryption in this router (edge)
 frontend public_ssl
+  log global
+  option tcplog
+  option dontlognull
 
   bind {{.ListenAddress}}:{{.HTTPSPort}} v4v6
   tcp-request inspect-delay 5s
@@ -88,9 +91,9 @@ backend be_sni
   {{ end }}
 
 frontend fe_sni
-  # log global
-  # option httplog
-  # option dontlognull
+  log global
+  option httplog
+  option dontlognull
 
   # terminate ssl on edge
   {{ if .UseUnixDomainSockets }}
