@@ -105,6 +105,14 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 	testComplete := time.After(c.Duration)
 
 	for {
+		var sendCh chan<- *http.Request
+		var link *http.Request
+
+		if len(pendingRequests) > 0 {
+			sendCh = requestCh
+			link = pendingRequests[0]
+		}
+
 		select {
 		case <-p.Context.Done():
 			return errors.New("test interrupted")
