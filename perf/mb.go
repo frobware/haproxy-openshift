@@ -39,41 +39,51 @@ func filterInTrafficByType(types []TrafficType, backendsMap BoundBackendsByTraff
 	return result
 }
 
-func generateMBRequests(p *ProgramCtx, useProxy bool, cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
+type portSelector func(b BoundBackend, cfg Globals) int
+type schemeSelector func(t TrafficType) string
+
+func haproxyPortSelector(b BoundBackend, cfg Globals) int {
+	switch b.TrafficType {
+	case HTTPTraffic:
+		return cfg.HTTPPort
+	default:
+		return cfg.HTTPSPort
+	}
+}
+
+func haproxySNIOnlyPortSelector(b BoundBackend, cfg Globals) int {
+	switch b.TrafficType {
+	case HTTPTraffic:
+		return cfg.HTTPPort
+	default:
+		return cfg.HTTPSPortSNIOnly
+	}
+}
+
+func haproxySchemeSelector(t TrafficType) string {
+	switch t {
+	case HTTPTraffic:
+		return "http"
+	default:
+		return "https"
+	}
+}
+
+func directPortSelector(b BoundBackend, cfg Globals) int {
+	return b.Port
+}
+
+func directSchemeSelector(t TrafficType) string {
+	switch t {
+	case HTTPTraffic, EdgeTraffic:
+		return "http"
+	default:
+		return "https"
+	}
+}
+
+func generateMBRequests(p *ProgramCtx, portSelector portSelector, schemeSelector schemeSelector, cfg MBRequestConfig, backends []BoundBackend) []MBRequest {
 	var requests []MBRequest
-
-	port := func(b BoundBackend, useProxy bool) int {
-		switch useProxy {
-		case true:
-			switch b.TrafficType {
-			case HTTPTraffic:
-				return p.HTTPPort
-			default:
-				return p.HTTPSPort
-			}
-		default:
-			return b.Port
-		}
-	}
-
-	scheme := func(t TrafficType, useProxy bool) string {
-		switch useProxy {
-		case true:
-			switch t {
-			case HTTPTraffic:
-				return "http"
-			default:
-				return "https"
-			}
-		default:
-			switch t {
-			case HTTPTraffic, EdgeTraffic:
-				return "http"
-			default:
-				return "https"
-			}
-		}
-	}
 
 	for _, b := range backends {
 		requests = append(requests, MBRequest{
@@ -82,54 +92,13 @@ func generateMBRequests(p *ProgramCtx, useProxy bool, cfg MBRequestConfig, backe
 			KeepAliveRequests: cfg.KeepAliveRequests,
 			Method:            "GET",
 			Path:              "/1024.html",
-			Port:              port(b, useProxy),
-			Scheme:            scheme(b.TrafficType, useProxy),
+			Port:              portSelector(b, p.Globals),
+			Scheme:            schemeSelector(b.TrafficType),
 			TLSSessionReuse:   cfg.TLSSessionReuse,
 		})
 	}
 
 	return requests
-}
-
-func writeRequests(p *ProgramCtx, basedir string, tlsSessionReuse bool, category string, useProxy bool, backendsByTrafficType BoundBackendsByTrafficType) error {
-	for _, clients := range []int{1, 50, 60, 70, 75, 80, 90, 100, 200} {
-		for _, requestCfg := range []struct {
-			Name         string
-			TrafficTypes []TrafficType
-		}{
-			{"edge", []TrafficType{EdgeTraffic}},
-			{"http", []TrafficType{HTTPTraffic}},
-			{"mix", AllTrafficTypes[:]},
-			{"passthrough", []TrafficType{PassthroughTraffic}},
-			{"reencrypt", []TrafficType{ReencryptTraffic}},
-		} {
-			for _, keepAliveRequests := range []int{0} {
-				config := MBRequestConfig{
-					Clients:           clients,
-					KeepAliveRequests: keepAliveRequests,
-					TLSSessionReuse:   tlsSessionReuse,
-					TrafficTypes:      requestCfg.TrafficTypes,
-				}
-				requests := generateMBRequests(p, useProxy, config, filterInTrafficByType(requestCfg.TrafficTypes, backendsByTrafficType))
-				data, err := json.MarshalIndent(requests, "", "  ")
-				if err != nil {
-					return err
-				}
-				filepath := fmt.Sprintf("%s/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v.json",
-					basedir,
-					category,
-					requestCfg.Name,
-					len(requests),
-					config.Clients,
-					config.KeepAliveRequests)
-				if err := createFile(filepath, data); err != nil {
-					return fmt.Errorf("error generating %s: %v", filepath, err)
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
@@ -143,15 +112,54 @@ func (c *GenWorkloadCmd) Run(p *ProgramCtx) error {
 		return err
 	}
 
-	for _, cfg := range []struct {
-		subdir   string
-		useProxy bool
+	for _, workload := range []struct {
+		subdir         string
+		useProxy       bool
+		portSelector   portSelector
+		schemeSelector schemeSelector
 	}{
-		{"direct", false},
-		{"haproxy", true},
+		{"direct", false, directPortSelector, directSchemeSelector},
+		{"haproxy", true, haproxyPortSelector, haproxySchemeSelector},
+		{"haproxy-reencrypt-only", true, haproxySNIOnlyPortSelector, haproxySchemeSelector},
 	} {
-		if err := writeRequests(p, basedir, p.TLSReuse, cfg.subdir, cfg.useProxy, backendsByTrafficType); err != nil {
-			return err
+		for _, clients := range []int{1, 2, 5, 10, 50, 75, 80, 90, 100, 200} {
+			for _, requestCfg := range []struct {
+				Name         string
+				TrafficTypes []TrafficType
+			}{
+				{"edge", []TrafficType{EdgeTraffic}},
+				{"http", []TrafficType{HTTPTraffic}},
+				{"mix", AllTrafficTypes[:]},
+				{"passthrough", []TrafficType{PassthroughTraffic}},
+				{"reencrypt", []TrafficType{ReencryptTraffic}},
+			} {
+				if workload.subdir == "haproxy-reencrypt-only" && requestCfg.Name != "reencrypt" {
+					continue
+				}
+				for _, keepAliveRequests := range []int{0} {
+					config := MBRequestConfig{
+						Clients:           clients,
+						KeepAliveRequests: keepAliveRequests,
+						TLSSessionReuse:   p.TLSReuse,
+						TrafficTypes:      requestCfg.TrafficTypes,
+					}
+					requests := generateMBRequests(p, workload.portSelector, workload.schemeSelector, config, filterInTrafficByType(requestCfg.TrafficTypes, backendsByTrafficType))
+					data, err := json.MarshalIndent(requests, "", "  ")
+					if err != nil {
+						return err
+					}
+					filepath := fmt.Sprintf("%s/%s/traffic-%v-backends-%v-clients-%v-keepalives-%v.json",
+						basedir,
+						workload.subdir,
+						requestCfg.Name,
+						len(requests),
+						config.Clients,
+						config.KeepAliveRequests)
+					if err := createFile(filepath, data); err != nil {
+						return fmt.Errorf("error generating %s: %v", filepath, err)
+					}
+				}
+			}
 		}
 	}
 
