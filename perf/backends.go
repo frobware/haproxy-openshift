@@ -97,8 +97,13 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
 		registerHandlerLock.Lock()
 		defer registerHandlerLock.Unlock()
-		if r.Method != "POST" {
+		if backendsRegistered == len(backendsByTrafficType)*p.Nbackends {
+			http.Error(w, "unexpected registration", http.StatusBadRequest)
+			return
+		}
+		if r.Method != http.MethodPost {
 			http.Error(w, r.Method, http.StatusBadRequest)
+			return
 		}
 		decoder := json.NewDecoder(r.Body)
 		decoder.DisallowUnknownFields()

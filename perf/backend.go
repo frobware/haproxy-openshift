@@ -87,30 +87,41 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		retries = 17
 	)
 
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/register", p.Port)
+
 	for retries > 0 {
-		resp, err = http.Post(fmt.Sprintf("http://127.0.0.1:%d/register", p.Port), "application/json", bytes.NewBuffer(jsonValue))
+		request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonValue))
 		if err != nil {
-			retries -= 1
-			log.Printf("#%v retries remaining", retries)
-			time.Sleep(250 * time.Millisecond)
-		} else {
+			return err
+		}
+		request.Header.Set("Content-Type", "application/json; charset=UTF-8")
+		request.Close = true
+		if resp, err = client.Do(request); err == nil {
 			break
 		}
+		retries -= 1
+		log.Printf("#%v retries remaining", retries)
+		time.Sleep(250 * time.Millisecond)
 	}
 
 	if err != nil {
-		return fmt.Errorf("POST failed for %+v: %v\n", boundBackend, err)
+		return fmt.Errorf("POST failed for %+v: %v", boundBackend, err)
 	}
-
-	defer resp.Body.Close()
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
+		resp.Body.Close()
 		return err
 	}
 
+	resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("POST failed for %+v; Status=%v\n", boundBackend, resp.Status)
+		return fmt.Errorf("registration failed for %+v; Status=%v", boundBackend, resp.Status)
 	}
 
 	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
