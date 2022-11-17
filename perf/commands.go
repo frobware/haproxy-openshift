@@ -14,6 +14,7 @@ type Globals struct {
 	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
 	OutputDir    string      `help:"Configuration output directory" short:"o" default:"testrun"`
 	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
+	Profile      bool        `help:"Record a CPU profile." short:"P"`
 	TLSReuse     bool        `help:"Enable TLS session reuse" default:"true"`
 	Version      VersionFlag `help:"Print version information and quit."`
 }

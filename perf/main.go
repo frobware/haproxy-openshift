@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"runtime/pprof"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -48,6 +49,18 @@ func main() {
 		log.Fatal(err)
 	}
 	cli.Globals.OutputDir = absPath
+
+	if cli.Globals.Profile {
+		pprofFile, pprofErr := os.Create("cpu.pprof")
+		if pprofErr != nil {
+			log.Fatal(pprofErr)
+		}
+		pprof.StartCPUProfile(pprofFile)
+		defer func() {
+			log.Println("stopping CPU profile")
+			pprof.StopCPUProfile()
+		}()
+	}
 
 	if err := ktx.Run(&ProgramCtx{Globals: cli.Globals, Context: signalCtx}); err != nil {
 		log.Fatal(err)
