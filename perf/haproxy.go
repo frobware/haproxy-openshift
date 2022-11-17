@@ -14,8 +14,10 @@ import (
 type HAProxyGlobalConfig struct {
 	Backends             []HAProxyBackendConfig
 	Certificate          string
+	EnableLogging        bool
 	HTTPPort             int
 	HTTPSPort            int
+	HTTPSPortSNIOnly     int
 	ListenAddress        string
 	Maxconn              int
 	Nbthread             int
@@ -146,8 +148,10 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 	config := HAProxyGlobalConfig{
 		Backends:             backends,
 		Certificate:          certFile,
+		EnableLogging:        c.EnableLogging,
 		HTTPPort:             p.HTTPPort,
 		HTTPSPort:            p.HTTPSPort,
+		HTTPSPortSNIOnly:     p.HTTPSPortSNIOnly,
 		ListenAddress:        c.ListenAddress,
 		Maxconn:              c.Maxconn,
 		Nbthread:             c.Nthreads,

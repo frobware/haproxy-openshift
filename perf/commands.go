@@ -6,17 +6,18 @@ import (
 )
 
 type Globals struct {
-	Debug        bool        `help:"Enable debug mode" short:"D" default:"false"`
-	DiscoveryURL string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
-	HTTPPort     int         `help:"HAProxy HTTP port" default:"8080"`
-	HTTPSPort    int         `help:"HAProxy HTTPS port" default:"8443"`
-	HostPrefix   string      `help:"Hostname prefix" default:"perf-test-hydra"`
-	Nbackends    int         `help:"Number of backends per traffic type" short:"n" default:"1"`
-	OutputDir    string      `help:"Configuration output directory" short:"o" default:"testrun"`
-	Port         int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
-	Profile      bool        `help:"Record a CPU profile." short:"P"`
-	TLSReuse     bool        `help:"Enable TLS session reuse" default:"true"`
-	Version      VersionFlag `help:"Print version information and quit."`
+	Debug            bool        `help:"Enable debug mode" short:"D" default:"false"`
+	DiscoveryURL     string      `help:"Backend metadata discovery URL" short:"u" default:"http://localhost:2000"`
+	HTTPPort         int         `help:"HAProxy HTTP port" default:"8080"`
+	HTTPSPort        int         `help:"HAProxy HTTPS port" default:"8443"`
+	HTTPSPortSNIOnly int         `help:"HAProxy HTTPS port for SNI-only traffic" default:"9443"`
+	HostPrefix       string      `help:"Hostname prefix" default:"perf-test-hydra"`
+	Nbackends        int         `help:"Number of backends per traffic type" short:"n" default:"1"`
+	OutputDir        string      `help:"Configuration output directory" short:"o" default:"testrun"`
+	Port             int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
+	Profile          bool        `help:"Record a CPU profile." short:"P"`
+	TLSReuse         bool        `help:"Enable TLS session reuse" default:"true"`
+	Version          VersionFlag `help:"Print version information and quit."`
 }
 
 type CLI struct {
@@ -42,6 +43,7 @@ type TestCmd struct {
 }
 
 type GenProxyConfigCmd struct {
+	EnableLogging        bool   `default:"true"`
 	ListenAddress        string `default:"::"`
 	Maxconn              int    `default:"0"`
 	Nthreads             int    `default:"4"`
