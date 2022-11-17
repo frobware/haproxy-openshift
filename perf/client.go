@@ -124,7 +124,7 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 		case <-progressTicker:
 			log.Printf("hits: %v errors: %v", hits, fetchErrors)
 
-		case requestCh <- pendingRequests[0]:
+		case sendCh <- link:
 			pendingRequests = pendingRequests[1:]
 
 		case result := <-resultCh:
