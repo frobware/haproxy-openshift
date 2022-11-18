@@ -26,7 +26,7 @@ defaults
 
 frontend public
 
-  bind {{.ListenAddress}}:{{.HTTPPort}} v4v6
+  bind {{.ListenAddress}}:{{.HTTPPort}}
   mode http
   tcp-request inspect-delay 5s
   tcp-request content accept if HTTP
@@ -56,7 +56,8 @@ frontend public_ssl
   option tcplog
   option dontlognull
   {{ end }}
-  bind {{.ListenAddress}}:{{.HTTPSPort}} v4v6
+  
+  bind {{.ListenAddress}}:{{.HTTPSPort}}
   tcp-request inspect-delay 5s
   tcp-request content accept if { req_ssl_hello_type 1 }
 
