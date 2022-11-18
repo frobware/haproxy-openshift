@@ -53,8 +53,9 @@ type GenProxyConfigCmd struct {
 }
 
 type SyncEnvoyConfigCmd struct {
-	ListenAddress string `default:""`
-	StatsPort     int    `default:"1936"`
+	EnableLogging bool   `default:"true"`
+	XdsServerPort int    `default:"18000"`
+	ListenAddress string `default:"127.0.0.1"`
 }
 
 type GenHostsCmd struct {

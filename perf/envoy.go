@@ -4,11 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	"github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	logstreamv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/stream/v3"
 	tlsinspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpproxy "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
@@ -38,22 +40,6 @@ import (
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 )
 
-var (
-	debug       bool
-	onlyLogging bool
-	withALS     bool
-
-	localhost = "127.0.0.1"
-
-	port        uint
-	gatewayPort uint
-	alsPort     uint
-
-	mode string
-
-	cache cachev3.SnapshotCache
-)
-
 type Callbacks struct {
 	Signal    chan struct{}
 	Debug     bool
@@ -64,20 +50,11 @@ type Callbacks struct {
 }
 
 const (
-	XdsCluster        = "xds_cluster"
-	Ads               = "ads"
-	Xds               = "xds"
-	Rest              = "rest"
 	exitCodeErr       = 1
 	exitCodeInterrupt = 2
+	proxyHttpPort     = 8080
+	proxyHttpsPort    = 8443
 )
-
-func init() {
-	flag.BoolVar(&debug, "debug", true, "Use debug logging")
-	flag.UintVar(&port, "port", 18000, "Management server port")
-	flag.UintVar(&gatewayPort, "gateway", 18001, "Management server port for HTTP gateway")
-	flag.StringVar(&mode, "ads", Ads, "Management server type (ads only now)")
-}
 
 func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	flag.Parse()
@@ -126,9 +103,9 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	srv := serverv3.NewServer(ctx, cache, cb)
 
 	// start the xDS server
-	go RunManagementServer(ctx, srv, port)
+	go RunManagementServer(ctx, srv, c.XdsServerPort)
 	<-signal
-	fmt.Printf("Envoy Connected")
+	log.Printf("Envoy Connected")
 
 	nodeId := cache.GetStatusKeys()[0]
 
@@ -165,12 +142,38 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 		},
 	}
 
+	var commonAccessLog []*accesslogv3.AccessLog
+	if c.EnableLogging {
+		commonAccessLog = []*accesslogv3.AccessLog{{
+			ConfigType: &accesslogv3.AccessLog_TypedConfig{
+				TypedConfig: convertToProtobuf(&logstreamv3.StderrAccessLog{
+					AccessLogFormat: &logstreamv3.StderrAccessLog_LogFormat{
+						LogFormat: &core.SubstitutionFormatString{
+							Format: &core.SubstitutionFormatString_TextFormatSource{
+								TextFormatSource: &core.DataSource{
+									Specifier: &core.DataSource_InlineString{
+										InlineString: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% " +
+											"%PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% " +
+											"\"%UPSTREAM_TRANSPORT_FAILURE_REASON%\" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% " +
+											"\"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" Host: \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" " +
+											"%UPSTREAM_CLUSTER% %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% " +
+											"%ROUTE_NAME%\n",
+									},
+								},
+							},
+						},
+					},
+				}),
+			}},
+		}
+	}
+
 	for t, backends := range backendsByTrafficType {
 		for _, b := range backends {
 			if t == HTTPTraffic {
 				httpVirtualHost := &route.VirtualHost{
 					Name:    b.Name,
-					Domains: []string{b.Name},
+					Domains: []string{fmt.Sprintf("%s:%d", b.Name, proxyHttpPort), b.Name},
 					Routes: []*route.Route{
 						{
 							Match: &route.RouteMatch{
@@ -192,7 +195,7 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 			} else if t == EdgeTraffic || t == ReencryptTraffic {
 				httpsVirtualHost := &route.VirtualHost{
 					Name:    b.Name,
-					Domains: []string{b.Name},
+					Domains: []string{fmt.Sprintf("%s:%d", b.Name, proxyHttpsPort), b.Name},
 					Routes: []*route.Route{
 						{
 							Match: &route.RouteMatch{
@@ -218,16 +221,11 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 						Cluster: b.Name,
 					},
 				}
-				tcpProxyPb, err := anypb.New(tcpProxy)
-				if err != nil {
-					log.Fatal(err)
-				}
-
 				passthroughFilterChain := &listenerv3.FilterChain{
 					Filters: []*listenerv3.Filter{{
 						Name: b.Name,
 						ConfigType: &listenerv3.Filter_TypedConfig{
-							TypedConfig: tcpProxyPb,
+							TypedConfig: convertToProtobuf(tcpProxy),
 						},
 					}},
 					FilterChainMatch: &listenerv3.FilterChainMatch{
@@ -274,14 +272,10 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 				upstreamTlsContext := &tlsv3.UpstreamTlsContext{
 					CommonTlsContext: commonHttpsTlsContext,
 				}
-				upstreamTlsContextPb, err := anypb.New(upstreamTlsContext)
-				if err != nil {
-					log.Fatal(err)
-				}
 				cluster.TransportSocket = &core.TransportSocket{
 					Name: wellknown.TransportSocketTLS,
 					ConfigType: &core.TransportSocket_TypedConfig{
-						TypedConfig: upstreamTlsContextPb,
+						TypedConfig: convertToProtobuf(upstreamTlsContext),
 					},
 				}
 			}
@@ -290,16 +284,14 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 		}
 	}
 
-	httpRoute := &route.RouteConfiguration{
-		Name:         "local_http_route",
-		VirtualHosts: httpVirtualHosts,
-	}
-
 	httpManager := &hcm.HttpConnectionManager{
 		CodecType:  hcm.HttpConnectionManager_AUTO,
 		StatPrefix: "ingress_http",
 		RouteSpecifier: &hcm.HttpConnectionManager_RouteConfig{
-			RouteConfig: httpRoute,
+			RouteConfig: &route.RouteConfiguration{
+				Name:         "local_http_route",
+				VirtualHosts: httpVirtualHosts,
+			},
 		},
 		HttpFilters: []*hcm.HttpFilter{{
 			Name: wellknown.Router,
@@ -307,10 +299,7 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 				TypedConfig: messageToAny(&router.Router{}),
 			},
 		}},
-	}
-	httpManagerPb, err := anypb.New(httpManager)
-	if err != nil {
-		log.Fatal(err)
+		AccessLog: commonAccessLog,
 	}
 
 	listenerHttp := listenerv3.Listener{
@@ -319,35 +308,34 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
 					Protocol: core.SocketAddress_TCP,
-					Address:  localhost,
+					Address:  c.ListenAddress,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: 8080,
+						PortValue: proxyHttpPort,
 					},
 				},
 			},
 		},
+		AccessLog: commonAccessLog,
 		FilterChains: []*listenerv3.FilterChain{
 			{
 				Filters: []*listenerv3.Filter{{
 					Name: wellknown.HTTPConnectionManager,
 					ConfigType: &listenerv3.Filter_TypedConfig{
-						TypedConfig: httpManagerPb,
+						TypedConfig: convertToProtobuf(httpManager),
 					},
 				}},
 			},
 		},
 	}
 
-	httpsRoute := &route.RouteConfiguration{
-		Name:         "local_https_route",
-		VirtualHosts: httpsVirtualHosts,
-	}
-
 	httpsManager := &hcm.HttpConnectionManager{
 		CodecType:  hcm.HttpConnectionManager_AUTO,
 		StatPrefix: "ingress_http",
 		RouteSpecifier: &hcm.HttpConnectionManager_RouteConfig{
-			RouteConfig: httpsRoute,
+			RouteConfig: &route.RouteConfiguration{
+				Name:         "local_https_route",
+				VirtualHosts: httpsVirtualHosts,
+			},
 		},
 		HttpFilters: []*hcm.HttpFilter{{
 			Name: wellknown.Router,
@@ -355,17 +343,7 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 				TypedConfig: messageToAny(&router.Router{}),
 			},
 		}},
-	}
-	httpsManagerPb, err := anypb.New(httpsManager)
-	if err != nil {
-		log.Fatal(err)
-	}
-	downstreamTlsContext := &tlsv3.DownstreamTlsContext{
-		CommonTlsContext: commonHttpsTlsContext,
-	}
-	downstreamTlsContextPb, err := anypb.New(downstreamTlsContext)
-	if err != nil {
-		log.Fatal(err)
+		AccessLog: commonAccessLog,
 	}
 
 	// Edge and reencrypt are one their own filter chain inside the 8443 listener
@@ -374,13 +352,15 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 		Filters: []*listenerv3.Filter{{
 			Name: wellknown.HTTPConnectionManager,
 			ConfigType: &listenerv3.Filter_TypedConfig{
-				TypedConfig: httpsManagerPb,
+				TypedConfig: convertToProtobuf(httpsManager),
 			},
 		}},
 		TransportSocket: &core.TransportSocket{
 			Name: wellknown.TransportSocketTLS,
 			ConfigType: &core.TransportSocket_TypedConfig{
-				TypedConfig: downstreamTlsContextPb,
+				TypedConfig: convertToProtobuf(&tlsv3.DownstreamTlsContext{
+					CommonTlsContext: commonHttpsTlsContext,
+				}),
 			},
 		},
 	}
@@ -388,31 +368,26 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	httpsFilterChains = append(httpsFilterChains, passthroughFilterChains...)
 	httpsFilterChains = append(httpsFilterChains, edgeReencryptFilterChain)
 
-	tlsInspector := &tlsinspector.TlsInspector{}
-	tlsInspectorPb, err := anypb.New(tlsInspector)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	listenerHttps := listenerv3.Listener{
 		Name: "listener_https",
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
 					Protocol: core.SocketAddress_TCP,
-					Address:  localhost,
+					Address:  c.ListenAddress,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: 8443,
+						PortValue: proxyHttpsPort,
 					},
 				},
 			},
 		},
+		AccessLog:    commonAccessLog,
 		FilterChains: httpsFilterChains,
 		ListenerFilters: []*listenerv3.ListenerFilter{
 			{
 				Name: "tls-inspector",
 				ConfigType: &listenerv3.ListenerFilter_TypedConfig{
-					TypedConfig: tlsInspectorPb,
+					TypedConfig: convertToProtobuf(&tlsinspector.TlsInspector{}),
 				},
 			},
 		},
@@ -420,11 +395,12 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 
 	listeners = append(listeners, &listenerHttp, &listenerHttps)
 
+	// Use a random version just so it's different everytime; otherwise, Envoy won't effectuate the snapshot.
 	var seededRand *rand.Rand = rand.New(
 		rand.NewSource(time.Now().UnixNano()))
 
 	version := seededRand.Int31()
-	log.Printf(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(version))
+	log.Printf("Creating snapshot Version " + fmt.Sprint(version))
 
 	resources := make(map[string][]types.Resource, 3)
 
@@ -444,7 +420,7 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	}
 
 	for !cb.allResponsesSent() {
-		fmt.Printf("Waiting for Envoy to sync...")
+		log.Printf("Waiting for Envoy to sync...")
 		time.Sleep(1 * time.Second)
 	}
 
@@ -467,7 +443,7 @@ func (cb *Callbacks) allResponsesSent() bool {
 const grpcMaxConcurrentStreams = 1000000
 
 // RunManagementServer starts an xDS server at the given port.
-func RunManagementServer(ctx context.Context, server serverv3.Server, port uint) {
+func RunManagementServer(ctx context.Context, server serverv3.Server, port int) {
 	var grpcOptions []grpc.ServerOption
 	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams))
 	grpcServer := grpc.NewServer(grpcOptions...)
@@ -481,8 +457,8 @@ func RunManagementServer(ctx context.Context, server serverv3.Server, port uint)
 	// register services
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, server)
 
-	fmt.Printf("Envoy Control Plan Listening on Port %d\n", port)
-	fmt.Printf("Waiting for Envoy to connect...\n")
+	log.Printf("Envoy xDS Server Listening on Port %d\n", port)
+	log.Printf("Waiting for Envoy to connect...\n")
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			log.Printf("%v", err)
@@ -494,20 +470,28 @@ func RunManagementServer(ctx context.Context, server serverv3.Server, port uint)
 	grpcServer.GracefulStop()
 }
 
+func convertToProtobuf(src proto.Message) *anypb.Any {
+	tcpProxyPb, err := anypb.New(src)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return tcpProxyPb
+}
+
 func (cb *Callbacks) Report() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	log.Printf("fetches: %d, requests: %d", cb.Fetches, cb.Requests)
+	//log.Printf("fetches: %d, requests: %d", cb.Fetches, cb.Requests)
 }
 func (cb *Callbacks) OnStreamOpen(_ context.Context, id int64, typ string) error {
-	log.Printf("OnStreamOpen %d open for %s", id, typ)
+	//log.Printf("OnStreamOpen %d open for %s", id, typ)
 	return nil
 }
 func (cb *Callbacks) OnStreamClosed(id int64) {
-	log.Printf("OnStreamClosed %d closed", id)
+	//log.Printf("OnStreamClosed %d closed", id)
 }
 func (cb *Callbacks) OnStreamRequest(id int64, r *discoverygrpc.DiscoveryRequest) error {
-	log.Printf("OnStreamRequest %v", r.TypeUrl)
+	log.Printf("Envoy Requested: %v", r.TypeUrl)
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.Requests++
@@ -518,13 +502,13 @@ func (cb *Callbacks) OnStreamRequest(id int64, r *discoverygrpc.DiscoveryRequest
 	return nil
 }
 func (cb *Callbacks) OnStreamResponse(ctx context.Context, id int64, req *discoverygrpc.DiscoveryRequest, resp *discoverygrpc.DiscoveryResponse) {
-	log.Printf("OnStreamResponse... %d   Request [%v],  Response[%v]", id, req.TypeUrl, resp.TypeUrl)
+	log.Printf("Responding: %d Request [%v],  Response[%v]", id, req.TypeUrl, resp.TypeUrl)
 	cb.Responses = append(cb.Responses, resp)
 	cb.Report()
 }
 
 func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *discoverygrpc.DiscoveryRequest) error {
-	log.Printf("OnFetchRequest... Request [%v]", req.TypeUrl)
+	//log.Printf("OnFetchRequest Request [%v]", req.TypeUrl)
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.Fetches++
@@ -535,25 +519,25 @@ func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *discoverygrpc.Disc
 	return nil
 }
 func (cb *Callbacks) OnFetchResponse(req *discoverygrpc.DiscoveryRequest, resp *discoverygrpc.DiscoveryResponse) {
-	log.Printf("OnFetchResponse... Resquest[%v],  Response[%v]", req.TypeUrl, resp.TypeUrl)
+	//log.Printf("OnFetchResponse Resquest[%v],  Response[%v]", req.TypeUrl, resp.TypeUrl)
 }
 
 func (cb *Callbacks) OnDeltaStreamClosed(id int64) {
-	log.Printf("OnDeltaStreamClosed... %v", id)
+	//log.Printf("OnDeltaStreamClosed... %v", id)
 }
 
 func (cb *Callbacks) OnDeltaStreamOpen(ctx context.Context, id int64, typ string) error {
-	log.Printf("OnDeltaStreamOpen... %v  of type %s", id, typ)
+	//log.Printf("OnDeltaStreamOpen... %v  of type %s", id, typ)
 	return nil
 }
 
 func (c *Callbacks) OnStreamDeltaRequest(i int64, request *discoverygrpc.DeltaDiscoveryRequest) error {
-	log.Printf("OnStreamDeltaRequest... %v  of type %s", i, request)
+	//log.Printf("OnStreamDeltaRequest... %v  of type %s", i, request)
 	return nil
 }
 
 func (c *Callbacks) OnStreamDeltaResponse(i int64, request *discoverygrpc.DeltaDiscoveryRequest, response *discoverygrpc.DeltaDiscoveryResponse) {
-	log.Printf("OnStreamDeltaResponse... %v  of type %s", i, request)
+	//log.Printf("OnStreamDeltaResponse... %v  of type %s", i, request)
 }
 
 // taken from https://github.com/istio/istio/blob/master/pilot/pkg/networking/util/util.go
