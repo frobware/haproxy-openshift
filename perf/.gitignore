@@ -3,3 +3,5 @@
 *.pem
 testrun
 perf-test-hydra
+*.so
+*.o

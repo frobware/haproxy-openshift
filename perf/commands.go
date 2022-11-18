@@ -23,13 +23,14 @@ type Globals struct {
 type CLI struct {
 	Globals
 
-	GenHosts       GenHostsCmd       `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
-	GenProxyConfig GenProxyConfigCmd `cmd:"" help:"Generate HAProxy configuration."`
-	GenWorkload    GenWorkloadCmd    `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
-	ServeBackend   ServeBackendCmd   `cmd:"" help:"Serve backend." hidden:"true"`
-	ServeBackends  ServeBackendsCmd  `cmd:"" help:"Serve backends."`
-	Test           TestCmd           `cmd:"" help:"Run client test using requests file."`
-	Version        VersionCmd        `cmd:"" help:"Print version information and quit."`
+	GenHosts        GenHostsCmd        `cmd:"" help:"Generate host names (/etc/hosts compatible)."`
+	GenProxyConfig  GenProxyConfigCmd  `cmd:"" help:"Generate HAProxy configuration."`
+	SyncEnvoyConfig SyncEnvoyConfigCmd `cmd:"" help:"Sync Envoy configuration by starting a Envoy Control Plane."`
+	GenWorkload     GenWorkloadCmd     `cmd:"" help:"Generate https://github.com/jmencak/mb requests."`
+	ServeBackend    ServeBackendCmd    `cmd:"" help:"Serve backend." hidden:"true"`
+	ServeBackends   ServeBackendsCmd   `cmd:"" help:"Serve backends."`
+	Test            TestCmd            `cmd:"" help:"Run client test using requests file."`
+	Version         VersionCmd         `cmd:"" help:"Print version information and quit."`
 }
 
 type ProgramCtx struct {
@@ -44,11 +45,16 @@ type TestCmd struct {
 
 type GenProxyConfigCmd struct {
 	EnableLogging        bool   `default:"true"`
-	ListenAddress        string `default:"::"`
+	ListenAddress        string `default:""`
 	Maxconn              int    `default:"0"`
 	Nthreads             int    `default:"4"`
 	StatsPort            int    `default:"1936"`
 	UseUnixDomainSockets bool   `default:"true"`
+}
+
+type SyncEnvoyConfigCmd struct {
+	ListenAddress string `default:""`
+	StatsPort     int    `default:"1936"`
 }
 
 type GenHostsCmd struct {
