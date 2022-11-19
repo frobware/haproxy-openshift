@@ -100,6 +100,7 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 	}
 
 	fetchErrors := 0
+	fetchBadStatus := 0
 	hits := 0
 	progressTicker := time.Tick(1 * time.Second)
 	testComplete := time.After(c.Duration)
@@ -118,7 +119,7 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 			return errors.New("test interrupted")
 
 		case <-testComplete:
-			log.Printf("hits: %v errors: %v request/s: %.0f", hits, fetchErrors, float64(hits)/float64(c.Duration.Seconds()))
+			log.Printf("hits: %v errors: %v bad_status: %v request/s: %.0f", hits, fetchErrors, fetchBadStatus, float64(hits)/float64(c.Duration.Seconds()))
 			return nil
 
 		case <-progressTicker:
@@ -132,6 +133,9 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 			if result.err != nil {
 				fetchErrors += 1
 				log.Printf("%s %q failed: %v", result.req.Method, result.req.URL, result.err)
+			} else if result.resp.StatusCode != 200 {
+				fetchBadStatus += 1
+				log.Printf("%s %q bad_status: %v", result.req.Method, result.req.URL, result.resp.StatusCode)
 			} else {
 				io.Copy(ioutil.Discard, result.resp.Body)
 				result.resp.Body.Close()
