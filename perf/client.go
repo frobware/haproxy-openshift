@@ -130,7 +130,7 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 			if result.err != nil {
 				fetchErrors += 1
 				log.Printf("%s %q failed: %v", result.req.Method, result.req.URL, result.err)
-			} else if result.resp.StatusCode != 200 {
+			} else if result.resp.StatusCode != http.StatusOK {
 				fetchBadStatus += 1
 				log.Printf("%s %q bad_status: %v", result.req.Method, result.req.URL, result.resp.StatusCode)
 			} else {
