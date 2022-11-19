@@ -126,18 +126,19 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 			pendingRequests = pendingRequests[1:]
 
 		case result := <-resultCh:
+			pendingRequests = append(pendingRequests, result.req)
 			hits += 1 // should we record a hit if there was an error?
 			if result.err != nil {
 				fetchErrors += 1
 				log.Printf("%s %q failed: %v", result.req.Method, result.req.URL, result.err)
-			} else if result.resp.StatusCode != http.StatusOK {
+				continue
+			}
+			if result.resp.StatusCode != http.StatusOK {
 				fetchBadStatus += 1
 				log.Printf("%s %q bad_status: %v", result.req.Method, result.req.URL, result.resp.StatusCode)
-			} else {
-				io.Copy(io.Discard, result.resp.Body)
-				result.resp.Body.Close()
 			}
-			pendingRequests = append(pendingRequests, result.req)
+			io.Copy(io.Discard, result.resp.Body)
+			result.resp.Body.Close()
 		}
 	}
 }
