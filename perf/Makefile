@@ -20,5 +20,6 @@ tidy:
 	@$(GO) mod tidy
 
 release: vendor tidy
+	@$(GO) run honnef.co/go/tools/cmd/staticcheck@latest ./...
 
 .PHONY: generate fmt vet vendor tidy release
