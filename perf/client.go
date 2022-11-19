@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -65,10 +64,8 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 
 	fetcher := func(client *http.Client) {
 		for {
-			select {
-			case request := <-requestCh:
-				resultCh <- fetch(request, client)
-			}
+			request := <-requestCh
+			resultCh <- fetch(request, client)
 		}
 	}
 
@@ -137,7 +134,7 @@ func (c *TestCmd) Run(p *ProgramCtx) error {
 				fetchBadStatus += 1
 				log.Printf("%s %q bad_status: %v", result.req.Method, result.req.URL, result.resp.StatusCode)
 			} else {
-				io.Copy(ioutil.Discard, result.resp.Body)
+				io.Copy(io.Discard, result.resp.Body)
 				result.resp.Body.Close()
 			}
 			pendingRequests = append(pendingRequests, result.req)

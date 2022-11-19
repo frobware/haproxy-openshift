@@ -51,7 +51,7 @@ func CreateTLSCerts(notBefore, notAfter time.Time, alternateNames ...string) (*C
 
 	caBytes, err := x509.CreateCertificate(rand.Reader, &ca, &ca, &caPrivKey.PublicKey, caPrivKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create rooot certificate: %v\n", err)
+		return nil, fmt.Errorf("failed to create rooot certificate: %v", err)
 	}
 
 	caPEM := new(bytes.Buffer)

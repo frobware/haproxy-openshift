@@ -249,7 +249,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		}
 	})
 
-	log.Printf("metadata server available at http://%s:%v/backends\n", mustResolveHostname(), p.Port)
+	log.Printf("metadata server available at http://%s:%v/backends", mustResolveHostname(), p.Port)
 
 	if err := g.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
