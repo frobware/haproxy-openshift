@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/yookoala/realpath"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -285,8 +286,9 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	}
 
 	httpManager := &hcm.HttpConnectionManager{
-		CodecType:  hcm.HttpConnectionManager_AUTO,
-		StatPrefix: "ingress_http",
+		CodecType:        hcm.HttpConnectionManager_AUTO,
+		StatPrefix:       "ingress_http",
+		UseRemoteAddress: &wrappers.BoolValue{Value: true}, // Enables XFF
 		RouteSpecifier: &hcm.HttpConnectionManager_RouteConfig{
 			RouteConfig: &route.RouteConfiguration{
 				Name:         "local_http_route",
@@ -329,8 +331,9 @@ func (c *SyncEnvoyConfigCmd) Run(p *ProgramCtx) error {
 	}
 
 	httpsManager := &hcm.HttpConnectionManager{
-		CodecType:  hcm.HttpConnectionManager_AUTO,
-		StatPrefix: "ingress_http",
+		CodecType:        hcm.HttpConnectionManager_AUTO,
+		StatPrefix:       "ingress_http",
+		UseRemoteAddress: &wrappers.BoolValue{Value: true}, // Enables XFF
 		RouteSpecifier: &hcm.HttpConnectionManager_RouteConfig{
 			RouteConfig: &route.RouteConfiguration{
 				Name:         "local_https_route",
