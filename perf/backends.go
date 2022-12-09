@@ -39,6 +39,7 @@ func (c *ServeBackendsCmd) spawnBackend(ctx context.Context, backend Backend) er
 		"serve-backend",
 		fmt.Sprintf("--name=%s", backend.Name),
 		fmt.Sprintf("--traffic-type=%s", backend.TrafficType),
+		fmt.Sprintf("--info-server=%t", c.InfoServer),
 	}
 	if c.ListenAddress != "127.0.0.1" {
 		newArgs = append(newArgs, fmt.Sprintf("--listen-address=%s", c.ListenAddress))

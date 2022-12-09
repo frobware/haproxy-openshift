@@ -20,6 +20,19 @@ import (
 
 //go:embed *.html
 var BackendFS embed.FS
+var listener net.Listener
+
+func debugServerHandler(w http.ResponseWriter, r *http.Request) {
+	msg := fmt.Sprintf("Backend Address: %s\n", listener.Addr().String())
+	w.Write([]byte(msg))
+	w.Write([]byte("Request Headers:\n"))
+	for name, values := range r.Header {
+		// Loop over all values for the name.
+		for _, value := range values {
+			w.Write([]byte(fmt.Sprintf("> %s: %s\n", name, value)))
+		}
+	}
+}
 
 func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 	log.SetPrefix(fmt.Sprintf("[c %v %v %s] ", os.Getpid(), mustResolveHostIP(), c.Name))
@@ -31,15 +44,24 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		listenAddress = "0.0.0.0"
 	}
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("%v:0", listenAddress))
+	var err error
+	listener, err = net.Listen("tcp", fmt.Sprintf("%v:0", listenAddress))
 	if err != nil {
 		return err
 	}
 
 	certs := certStore(path.Join(p.Globals.OutputDir, "certs"))
 
+	var serverHandler http.Handler
+	// If debug is on, use our debug handler to dump request and server information
+	if c.InfoServer {
+		serverHandler = http.HandlerFunc(debugServerHandler)
+	} else {
+		serverHandler = http.FileServer(http.FS(BackendFS))
+	}
+
 	httpServer := &http.Server{
-		Handler:      http.FileServer(http.FS(BackendFS)),
+		Handler:      serverHandler,
 		Addr:         fmt.Sprintf("%v:%v", listenAddress, p.Port),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,

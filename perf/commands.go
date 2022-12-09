@@ -68,12 +68,14 @@ type GenWorkloadCmd struct {
 
 type ServeBackendsCmd struct {
 	ListenAddress string `default:"127.0.0.1"`
+	InfoServer    bool   `help:"Enable server to respond with server info" short:"I" default:"false"`
 }
 
 type ServeBackendCmd struct {
 	Name          string      `default:""`
 	ListenAddress string      `default:""`
 	TrafficType   TrafficType `default:""`
+	InfoServer    bool        `help:"Enable server to respond with server info" short:"I" default:"false"`
 }
 
 type VersionCmd struct{}
