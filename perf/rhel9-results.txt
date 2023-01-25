@@ -1,0 +1,120 @@
+Time: 60.10s
+Sent: 214.00MiB, 3.56MiB/s
+Recv: 2.42GiB, 41.28MiB/s
+Hits: 2023399, 33669.34/s
+Time: 60.10s
+Sent: 211.95MiB, 3.53MiB/s
+Recv: 2.40GiB, 40.88MiB/s
+Hits: 2003970, 33345.38/s
+Time: 60.09s
+Sent: 221.49MiB, 3.69MiB/s
+Recv: 2.51GiB, 42.74MiB/s
+Hits: 2094197, 34851.38/s
+Time: 60.10s
+Sent: 214.41MiB, 3.57MiB/s
+Recv: 2.43GiB, 41.36MiB/s
+Hits: 2027312, 33732.32/s
+Time: 60.10s
+Sent: 223.76MiB, 3.72MiB/s
+Recv: 2.53GiB, 43.17MiB/s
+Hits: 2115572, 35201.08/s
+Time: 60.09s
+Sent: 218.23MiB, 3.63MiB/s
+Recv: 2.47GiB, 42.11MiB/s
+Hits: 2063337, 34339.22/s
+Time: 60.09s
+Sent: 219.10MiB, 3.65MiB/s
+Recv: 2.48GiB, 42.27MiB/s
+Hits: 2071617, 34472.55/s
+Time: 60.10s
+Sent: 233.47MiB, 3.88MiB/s
+Recv: 2.64GiB, 45.06MiB/s
+Hits: 2207579, 36732.63/s
+Time: 60.10s
+Sent: 232.80MiB, 3.87MiB/s
+Recv: 2.64GiB, 44.92MiB/s
+Hits: 2201148, 36624.97/s
+Time: 60.10s
+Sent: 221.88MiB, 3.69MiB/s
+Recv: 2.51GiB, 42.81MiB/s
+Hits: 2097946, 34907.15/s
+Time: 60.10s
+Sent: 227.73MiB, 3.79MiB/s
+Recv: 2.58GiB, 43.94MiB/s
+Hits: 2153180, 35826.41/s
+Time: 60.09s
+Sent: 237.81MiB, 3.96MiB/s
+Recv: 2.69GiB, 45.90MiB/s
+Hits: 2248472, 37416.68/s
+Time: 60.10s
+Sent: 231.67MiB, 3.85MiB/s
+Recv: 2.62GiB, 44.71MiB/s
+Hits: 2190595, 36449.94/s
+Time: 60.10s
+Sent: 224.59MiB, 3.74MiB/s
+Recv: 2.54GiB, 43.33MiB/s
+Hits: 2123578, 35336.08/s
+Time: 60.10s
+Sent: 231.16MiB, 3.85MiB/s
+Recv: 2.62GiB, 44.61MiB/s
+Hits: 2185632, 36367.32/s
+Time: 60.10s
+Sent: 233.08MiB, 3.88MiB/s
+Recv: 2.64GiB, 44.98MiB/s
+Hits: 2203744, 36670.43/s
+Time: 60.09s
+Sent: 231.36MiB, 3.85MiB/s
+Recv: 2.62GiB, 44.65MiB/s
+Hits: 2187644, 36405.28/s
+Time: 60.09s
+Sent: 232.04MiB, 3.86MiB/s
+Recv: 2.63GiB, 44.78MiB/s
+Hits: 2193973, 36508.42/s
+Time: 60.09s
+Sent: 229.44MiB, 3.82MiB/s
+Recv: 2.60GiB, 44.28MiB/s
+Hits: 2169508, 36102.77/s
+Time: 60.09s
+Sent: 228.08MiB, 3.80MiB/s
+Recv: 2.58GiB, 44.01MiB/s
+Hits: 2156630, 35888.27/s
+Time: 60.09s
+Sent: 230.10MiB, 3.83MiB/s
+Recv: 2.61GiB, 44.41MiB/s
+Hits: 2175628, 36207.47/s
+Time: 60.09s
+Sent: 228.40MiB, 3.80MiB/s
+Recv: 2.59GiB, 44.08MiB/s
+Hits: 2159644, 35941.95/s
+Time: 60.09s
+Sent: 230.05MiB, 3.83MiB/s
+Recv: 2.61GiB, 44.40MiB/s
+Hits: 2175161, 36197.14/s
+Time: 60.10s
+Sent: 233.60MiB, 3.89MiB/s
+Recv: 2.65GiB, 45.08MiB/s
+Hits: 2208713, 36750.65/s
+Time: 60.10s
+Sent: 231.52MiB, 3.85MiB/s
+Recv: 2.62GiB, 44.68MiB/s
+Hits: 2189150, 36426.75/s
+Time: 60.10s
+Sent: 233.21MiB, 3.88MiB/s
+Recv: 2.64GiB, 45.00MiB/s
+Hits: 2205028, 36689.36/s
+Time: 60.10s
+Sent: 233.09MiB, 3.88MiB/s
+Recv: 2.64GiB, 44.98MiB/s
+Hits: 2203855, 36670.25/s
+Time: 60.10s
+Sent: 225.10MiB, 3.75MiB/s
+Recv: 2.55GiB, 43.43MiB/s
+Hits: 2128377, 35415.92/s
+Time: 60.09s
+Sent: 229.26MiB, 3.82MiB/s
+Recv: 2.60GiB, 44.24MiB/s
+Hits: 2167688, 36071.96/s
+Time: 60.09s
+Sent: 228.35MiB, 3.80MiB/s
+Recv: 2.59GiB, 44.06MiB/s
+Hits: 2159074, 35927.98/s
