@@ -1,0 +1,146 @@
+Time: 60.09s
+Sent: 188.19MiB, 3.13MiB/s
+Recv: 2.13GiB, 36.33MiB/s
+Hits: 1779322, 29609.03/s
+Errors connection: 2282, status: 0, parser: 0
+Time: 60.09s
+Sent: 181.19MiB, 3.01MiB/s
+Recv: 2.05GiB, 35.02MiB/s
+Hits: 1713173, 28507.82/s
+Errors connection: 4444, status: 0, parser: 0
+Time: 60.09s
+Sent: 178.38MiB, 2.97MiB/s
+Recv: 2.03GiB, 34.52MiB/s
+Hits: 1686665, 28070.00/s
+Errors connection: 6562, status: 0, parser: 0
+Time: 60.10s
+Sent: 214.73MiB, 3.57MiB/s
+Recv: 2.43GiB, 41.48MiB/s
+Hits: 2030295, 33782.88/s
+Errors connection: 2649, status: 0, parser: 0
+Time: 60.09s
+Sent: 185.33MiB, 3.08MiB/s
+Recv: 2.10GiB, 35.84MiB/s
+Hits: 1752230, 29159.40/s
+Errors connection: 5443, status: 0, parser: 0
+Time: 60.10s
+Sent: 197.04MiB, 3.28MiB/s
+Recv: 2.23GiB, 38.08MiB/s
+Hits: 1863109, 31001.16/s
+Errors connection: 4129, status: 0, parser: 0
+Time: 60.09s
+Sent: 191.42MiB, 3.19MiB/s
+Recv: 2.17GiB, 37.00MiB/s
+Hits: 1809933, 30119.78/s
+Errors connection: 4371, status: 0, parser: 0
+Time: 60.10s
+Sent: 189.82MiB, 3.16MiB/s
+Recv: 2.15GiB, 36.70MiB/s
+Hits: 1794823, 29863.99/s
+Errors connection: 5000, status: 0, parser: 0
+Time: 60.10s
+Sent: 198.36MiB, 3.30MiB/s
+Recv: 2.25GiB, 38.32MiB/s
+Hits: 1875498, 31207.04/s
+Errors connection: 3301, status: 0, parser: 0
+Time: 60.09s
+Sent: 240.91MiB, 4.01MiB/s
+Recv: 2.73GiB, 46.50MiB/s
+Hits: 2277849, 37905.69/s
+Time: 60.10s
+Sent: 214.90MiB, 3.58MiB/s
+Recv: 2.44GiB, 41.50MiB/s
+Hits: 2031951, 33811.73/s
+Errors connection: 2054, status: 0, parser: 0
+Time: 60.10s
+Sent: 192.33MiB, 3.20MiB/s
+Recv: 2.18GiB, 37.16MiB/s
+Hits: 1818548, 30260.82/s
+Errors connection: 3915, status: 0, parser: 0
+Time: 60.10s
+Sent: 223.02MiB, 3.71MiB/s
+Recv: 2.53GiB, 43.08MiB/s
+Hits: 2108720, 35087.12/s
+Errors connection: 2272, status: 0, parser: 0
+Time: 60.10s
+Sent: 219.35MiB, 3.65MiB/s
+Recv: 2.49GiB, 42.36MiB/s
+Hits: 2073917, 34507.38/s
+Errors connection: 2084, status: 0, parser: 0
+Time: 60.10s
+Sent: 190.90MiB, 3.18MiB/s
+Recv: 2.17GiB, 36.89MiB/s
+Hits: 1805014, 30034.50/s
+Errors connection: 4216, status: 0, parser: 0
+Time: 60.10s
+Sent: 232.57MiB, 3.87MiB/s
+Recv: 2.63GiB, 44.88MiB/s
+Hits: 2199015, 36589.35/s
+Time: 60.10s
+Sent: 199.60MiB, 3.32MiB/s
+Recv: 2.26GiB, 38.54MiB/s
+Hits: 1887242, 31402.50/s
+Errors connection: 2450, status: 0, parser: 0
+Time: 60.09s
+Sent: 248.64MiB, 4.14MiB/s
+Recv: 2.82GiB, 48.00MiB/s
+Hits: 2350899, 39119.96/s
+Time: 60.10s
+Sent: 199.52MiB, 3.32MiB/s
+Recv: 2.26GiB, 38.52MiB/s
+Hits: 1886515, 31391.40/s
+Errors connection: 2045, status: 0, parser: 0
+Time: 60.09s
+Sent: 235.43MiB, 3.92MiB/s
+Recv: 2.67GiB, 45.44MiB/s
+Hits: 2226057, 37042.45/s
+Time: 60.10s
+Sent: 192.00MiB, 3.19MiB/s
+Recv: 2.18GiB, 37.07MiB/s
+Hits: 1815379, 30206.94/s
+Errors connection: 2672, status: 0, parser: 0
+Time: 60.10s
+Sent: 207.43MiB, 3.45MiB/s
+Recv: 2.35GiB, 40.06MiB/s
+Hits: 1961232, 32633.43/s
+Errors connection: 2520, status: 0, parser: 0
+Time: 60.10s
+Sent: 225.18MiB, 3.75MiB/s
+Recv: 2.55GiB, 43.50MiB/s
+Hits: 2129080, 35425.68/s
+Errors connection: 2500, status: 0, parser: 0
+Time: 60.09s
+Sent: 213.72MiB, 3.56MiB/s
+Recv: 2.42GiB, 41.27MiB/s
+Hits: 2020799, 33627.32/s
+Errors connection: 2096, status: 0, parser: 0
+Time: 60.10s
+Sent: 190.36MiB, 3.17MiB/s
+Recv: 2.16GiB, 36.79MiB/s
+Hits: 1799865, 29949.43/s
+Errors connection: 4214, status: 0, parser: 0
+Time: 60.09s
+Sent: 197.51MiB, 3.29MiB/s
+Recv: 2.24GiB, 38.15MiB/s
+Hits: 1867520, 31076.96/s
+Errors connection: 2924, status: 0, parser: 0
+Time: 60.08s
+Sent: 199.86MiB, 3.33MiB/s
+Recv: 2.27GiB, 38.63MiB/s
+Hits: 1889726, 31451.32/s
+Errors connection: 3770, status: 0, parser: 0
+Time: 60.09s
+Sent: 221.48MiB, 3.69MiB/s
+Recv: 2.51GiB, 42.78MiB/s
+Hits: 2094166, 34848.50/s
+Errors connection: 2274, status: 0, parser: 0
+Time: 60.10s
+Sent: 192.43MiB, 3.20MiB/s
+Recv: 2.18GiB, 37.17MiB/s
+Hits: 1819496, 30271.96/s
+Errors connection: 3512, status: 0, parser: 0
+Time: 60.09s
+Sent: 218.55MiB, 3.64MiB/s
+Recv: 2.48GiB, 42.22MiB/s
+Hits: 2066465, 34386.74/s
+Errors connection: 2500, status: 0, parser: 0

@@ -1,0 +1,131 @@
+Time: 60.10s
+Sent: 218.06MiB, 3.63MiB/s
+Recv: 2.47GiB, 42.07MiB/s
+Hits: 2061801, 34308.83/s
+Errors connection: 20, status: 0, parser: 0
+Time: 60.09s
+Sent: 222.14MiB, 3.70MiB/s
+Recv: 2.52GiB, 42.86MiB/s
+Hits: 2100415, 34952.02/s
+Time: 60.09s
+Sent: 225.39MiB, 3.75MiB/s
+Recv: 2.55GiB, 43.50MiB/s
+Hits: 2131100, 35467.83/s
+Errors connection: 29, status: 0, parser: 0
+Time: 60.10s
+Sent: 228.98MiB, 3.81MiB/s
+Recv: 2.59GiB, 44.18MiB/s
+Hits: 2165069, 36024.21/s
+Time: 60.10s
+Sent: 239.96MiB, 3.99MiB/s
+Recv: 2.72GiB, 46.31MiB/s
+Hits: 2268903, 37754.36/s
+Errors connection: 18, status: 0, parser: 0
+Time: 60.10s
+Sent: 227.68MiB, 3.79MiB/s
+Recv: 2.58GiB, 43.93MiB/s
+Hits: 2152814, 35820.60/s
+Time: 60.10s
+Sent: 237.75MiB, 3.96MiB/s
+Recv: 2.69GiB, 45.88MiB/s
+Hits: 2247997, 37403.63/s
+Errors connection: 35, status: 0, parser: 0
+Time: 60.10s
+Sent: 236.24MiB, 3.93MiB/s
+Recv: 2.68GiB, 45.59MiB/s
+Hits: 2233700, 37167.15/s
+Time: 60.09s
+Sent: 233.05MiB, 3.88MiB/s
+Recv: 2.64GiB, 44.98MiB/s
+Hits: 2203452, 36670.12/s
+Time: 60.10s
+Sent: 234.86MiB, 3.91MiB/s
+Recv: 2.66GiB, 45.32MiB/s
+Hits: 2220595, 36948.67/s
+Time: 60.09s
+Sent: 238.44MiB, 3.97MiB/s
+Recv: 2.70GiB, 46.02MiB/s
+Hits: 2254534, 37516.19/s
+Time: 60.10s
+Sent: 236.64MiB, 3.94MiB/s
+Recv: 2.68GiB, 45.67MiB/s
+Hits: 2237466, 37230.39/s
+Errors connection: 807, status: 0, parser: 0
+Time: 60.10s
+Sent: 234.13MiB, 3.90MiB/s
+Recv: 2.65GiB, 45.18MiB/s
+Hits: 2213786, 36836.61/s
+Time: 60.10s
+Sent: 242.29MiB, 4.03MiB/s
+Recv: 2.74GiB, 46.76MiB/s
+Hits: 2290846, 38118.71/s
+Time: 60.10s
+Sent: 234.20MiB, 3.90MiB/s
+Recv: 2.65GiB, 45.20MiB/s
+Hits: 2214376, 36847.53/s
+Time: 60.10s
+Sent: 235.39MiB, 3.92MiB/s
+Recv: 2.67GiB, 45.43MiB/s
+Hits: 2225684, 37034.45/s
+Errors connection: 190, status: 0, parser: 0
+Time: 60.09s
+Sent: 232.62MiB, 3.87MiB/s
+Recv: 2.63GiB, 44.89MiB/s
+Hits: 2199488, 36601.42/s
+Time: 60.10s
+Sent: 234.32MiB, 3.90MiB/s
+Recv: 2.65GiB, 45.22MiB/s
+Hits: 2215521, 36864.93/s
+Time: 60.10s
+Sent: 238.98MiB, 3.98MiB/s
+Recv: 2.71GiB, 46.12MiB/s
+Hits: 2259602, 37599.58/s
+Time: 60.10s
+Sent: 237.28MiB, 3.95MiB/s
+Recv: 2.69GiB, 45.79MiB/s
+Hits: 2243464, 37330.63/s
+Time: 60.10s
+Sent: 235.82MiB, 3.92MiB/s
+Recv: 2.67GiB, 45.51MiB/s
+Hits: 2229765, 37103.11/s
+Time: 60.10s
+Sent: 237.81MiB, 3.96MiB/s
+Recv: 2.69GiB, 45.90MiB/s
+Hits: 2248512, 37414.74/s
+Time: 60.09s
+Sent: 234.95MiB, 3.91MiB/s
+Recv: 2.66GiB, 45.34MiB/s
+Hits: 2221521, 36966.90/s
+Errors connection: 36, status: 0, parser: 0
+Time: 60.09s
+Sent: 232.74MiB, 3.87MiB/s
+Recv: 2.64GiB, 44.92MiB/s
+Hits: 2200558, 36619.55/s
+Errors connection: 1, status: 0, parser: 0
+Time: 60.09s
+Sent: 233.76MiB, 3.89MiB/s
+Recv: 2.65GiB, 45.12MiB/s
+Hits: 2210254, 36782.13/s
+Time: 60.10s
+Sent: 236.38MiB, 3.93MiB/s
+Recv: 2.68GiB, 45.62MiB/s
+Hits: 2234978, 37187.44/s
+Errors connection: 48, status: 0, parser: 0
+Time: 60.09s
+Sent: 235.71MiB, 3.92MiB/s
+Recv: 2.67GiB, 45.49MiB/s
+Hits: 2228649, 37086.13/s
+Errors connection: 17, status: 0, parser: 0
+Time: 60.10s
+Sent: 233.47MiB, 3.88MiB/s
+Recv: 2.64GiB, 45.05MiB/s
+Hits: 2207552, 36731.01/s
+Errors connection: 44, status: 0, parser: 0
+Time: 60.09s
+Sent: 232.71MiB, 3.87MiB/s
+Recv: 2.64GiB, 44.91MiB/s
+Hits: 2200260, 36617.06/s
+Time: 60.09s
+Sent: 237.17MiB, 3.95MiB/s
+Recv: 2.69GiB, 45.78MiB/s
+Hits: 2242549, 37321.37/s
