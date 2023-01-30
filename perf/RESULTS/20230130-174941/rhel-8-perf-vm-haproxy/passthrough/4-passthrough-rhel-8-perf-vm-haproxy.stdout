@@ -1,0 +1,5 @@
+Time: 60.08s
+Sent: 604.53MiB, 10.06MiB/s
+Recv: 5.99GiB, 102.13MiB/s
+Hits: 5614664, 93446.52/s
+Errors connection: 287, status: 0, parser: 0
