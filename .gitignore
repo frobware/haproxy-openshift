@@ -9,3 +9,5 @@ tls.*
 /perf/perf
 /perf/testrun/
 /perf/cmd/gomb/gomb
+/perf/RESULTS/**/*.stderr
+*.stderr
