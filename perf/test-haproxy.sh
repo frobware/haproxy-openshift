@@ -8,11 +8,17 @@ trap "echo interrupt; exit 1" INT TERM
 : ${DURATION:=60}
 
 s1=1
-s2=10
+s2=8
 
 date="$(date +%Y%m%d-%H%M%S)"
 top_level_results_dir="RESULTS/$date"
-mkdir -p "${top_level_results_dir}/$PROXY_HOST"
+metadata_dir="${top_level_results_dir}/$PROXY_HOST/.metadata"
+
+mkdir -p "${metadata_dir}"
+
+ssh $PROXY_HOST haproxy -vv > "$metadata_dir/haproxy"
+ssh $PROXY_HOST sudo sysctl -a > "$metadata_dir/sysctl"
+ssh $PROXY_HOST cat /etc/os-release > "$metadata_dir/os-release"
 
 for traffic_type in edge http reencrypt passthrough; do
     test_output_dir="${top_level_results_dir}/$PROXY_HOST/$traffic_type"
@@ -32,7 +38,6 @@ for traffic_type in edge http reencrypt passthrough; do
 	~/src/github.com/jmencak/mb/mb --duration ${DURATION} --request-file ./testrun/requests/haproxy/traffic-${traffic_type}-backends-100-clients-100-keepalives-0.json > "$stdout" 2>"$stderr"
     done
     chmod -R u-w,g-w "${test_output_dir}"
-    sleep 30
 done
 
 pushd RESULTS
