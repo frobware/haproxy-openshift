@@ -8,9 +8,8 @@ trap "echo interrupt; exit 1" INT TERM
 : "${DURATION:=60}"
 : "${MB:=$HOME/src/github.com/jmencak/mb/mb}"
 : "${TRAFFIC_TYPES:="edge http reencrypt passthrough"}"
-
-s1=1
-s2=8
+: "${SAMPLES:=8}"
+: "${GATHER_METADATA:=1}"
 
 date="$(date +%Y%m%d-%H%M%S)"
 top_level_results_dir="RESULTS/$date"
@@ -18,17 +17,18 @@ metadata_dir="${top_level_results_dir}/$PROXY_HOST/.metadata"
 
 mkdir -p "${metadata_dir}"
 
-# Gather metadata
-ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
-ssh "$PROXY_HOST" sudo sysctl -a > "$metadata_dir/sysctl"
-ssh "$PROXY_HOST" cat /etc/os-release > "$metadata_dir/os-release"
-$MB version --version > "$metadata_dir/mb"
+if [[ $GATHER_METADATA -eq 1 ]]; then
+    ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
+    ssh "$PROXY_HOST" sudo sysctl -a > "$metadata_dir/sysctl"
+    ssh "$PROXY_HOST" cat /etc/os-release > "$metadata_dir/os-release"
+    $MB version --version > "$metadata_dir/mb"
+fi
 
 for traffic_type in ${TRAFFIC_TYPES}; do
     test_output_dir="${top_level_results_dir}/$PROXY_HOST/$traffic_type"
     mkdir -p "${test_output_dir}"
-    for i in $(seq $s1 $s2); do
-	echo "${i}/$s2 $test_output_dir"
+    for i in $(seq 1 $SAMPLES); do
+	echo "${i}/$SAMPLES $test_output_dir"
 	stdout="${test_output_dir}/${i}-${traffic_type}-${PROXY_HOST}.stdout"
 	stderr="${test_output_dir}/${i}-${traffic_type}-${PROXY_HOST}.stderr"
 	time_wait=0
