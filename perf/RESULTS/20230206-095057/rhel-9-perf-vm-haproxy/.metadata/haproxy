@@ -1,0 +1,60 @@
+HAProxy version 2.6.6-274d1a4 2022/09/22 - https://haproxy.org/
+Status: long-term supported branch - will stop receiving fixes around Q2 2027.
+Known bugs: http://www.haproxy.org/bugs/bugs-2.6.6.html
+Running on: Linux 5.14.0-162.12.1.el9_1.x86_64 #1 SMP PREEMPT_DYNAMIC Tue Dec 20 06:06:30 EST 2022 x86_64
+Build options :
+  TARGET  = linux-glibc
+  CPU     = generic
+  CC      = cc
+  CFLAGS  = -O2 -g -Wall -Wextra -Wundef -Wdeclaration-after-statement -Wfatal-errors -Wtype-limits -Wshift-negative-value -Wshift-overflow=2 -Wduplicated-cond -Wnull-dereference -fwrapv -Wno-address-of-packed-member -Wno-unused-label -Wno-sign-compare -Wno-unused-parameter -Wno-clobbered -Wno-missing-field-initializers -Wno-cast-function-type -Wno-string-plus-int -Wno-atomic-alignment
+  OPTIONS = USE_PCRE=1 USE_LINUX_TPROXY=1 USE_CRYPT_H=1 USE_GETADDRINFO=1 USE_OPENSSL=1 USE_ZLIB=1
+  DEBUG   = -DDEBUG_STRICT -DDEBUG_MEMORY_POOLS
+
+Feature list : +EPOLL -KQUEUE +NETFILTER +PCRE -PCRE_JIT -PCRE2 -PCRE2_JIT +POLL +THREAD +BACKTRACE -STATIC_PCRE -STATIC_PCRE2 +TPROXY +LINUX_TPROXY +LINUX_SPLICE +LIBCRYPT +CRYPT_H -ENGINE +GETADDRINFO +OPENSSL -LUA +ACCEPT4 -CLOSEFROM +ZLIB -SLZ +CPU_AFFINITY +TFO +NS +DL +RT -DEVICEATLAS -51DEGREES -WURFL -SYSTEMD -OBSOLETE_LINKER +PRCTL -PROCCTL +THREAD_DUMP -EVPORTS -OT -QUIC -PROMEX -MEMORY_PROFILING
+
+Default settings :
+  bufsize = 16384, maxrewrite = 1024, maxpollevents = 200
+
+Built with multi-threading support (MAX_THREADS=64, default=4).
+Built with OpenSSL version : OpenSSL 3.0.1 14 Dec 2021
+Running on OpenSSL version : OpenSSL 3.0.1 14 Dec 2021
+OpenSSL library supports TLS extensions : yes
+OpenSSL library supports SNI : yes
+OpenSSL library supports : TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3
+OpenSSL providers loaded : default
+Built with network namespace support.
+Support for malloc_trim() is enabled.
+Built with zlib version : 1.2.11
+Running on zlib version : 1.2.11
+Compression algorithms supported : identity("identity"), deflate("deflate"), raw-deflate("deflate"), gzip("gzip")
+Built with transparent proxy support using: IP_TRANSPARENT IPV6_TRANSPARENT IP_FREEBIND
+Built with PCRE version : 8.44 2020-02-12
+Running on PCRE version : 8.44 2020-02-12
+PCRE library supports JIT : no (USE_PCRE_JIT not set)
+Encrypted password support via crypt(3): yes
+Built with gcc compiler version 11.3.1 20220421 (Red Hat 11.3.1-2)
+
+Available polling systems :
+      epoll : pref=300,  test result OK
+       poll : pref=200,  test result OK
+     select : pref=150,  test result OK
+Total: 3 (3 usable), will use epoll.
+
+Available multiplexer protocols :
+(protocols marked as <default> cannot be specified using 'proto' keyword)
+         h2 : mode=HTTP  side=FE|BE  mux=H2    flags=HTX|HOL_RISK|NO_UPG
+       fcgi : mode=HTTP  side=BE     mux=FCGI  flags=HTX|HOL_RISK|NO_UPG
+         h1 : mode=HTTP  side=FE|BE  mux=H1    flags=HTX|NO_UPG
+  <default> : mode=HTTP  side=FE|BE  mux=H1    flags=HTX
+       none : mode=TCP   side=FE|BE  mux=PASS  flags=NO_UPG
+  <default> : mode=TCP   side=FE|BE  mux=PASS  flags=
+
+Available services : none
+
+Available filters :
+	[CACHE] cache
+	[COMP] compression
+	[FCGI] fcgi-app
+	[SPOE] spoe
+	[TRACE] trace
+
