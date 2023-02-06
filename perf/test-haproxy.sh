@@ -10,6 +10,7 @@ trap "echo interrupt; exit 1" INT TERM
 : "${TRAFFIC_TYPES:="edge http reencrypt passthrough"}"
 : "${SAMPLES:=8}"
 : "${GATHER_METADATA:=1}"
+: "${GATHER_METADATA_HAPROXY:=1}"
 
 date="$(date +%Y%m%d-%H%M%S)"
 top_level_results_dir="RESULTS/$date"
@@ -18,10 +19,15 @@ metadata_dir="${top_level_results_dir}/$PROXY_HOST/.metadata"
 mkdir -p "${metadata_dir}"
 
 if [[ $GATHER_METADATA -eq 1 ]]; then
-    ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
     ssh "$PROXY_HOST" sudo sysctl -a > "$metadata_dir/sysctl"
     ssh "$PROXY_HOST" cat /etc/os-release > "$metadata_dir/os-release"
     $MB version --version > "$metadata_dir/mb"
+fi
+
+if [[ $GATHER_METADATA_HAPROXY -eq 1 ]]; then
+    ssh "$PROXY_HOST" rpm -qa haproxy26 > "$metadata_dir/rpm"
+    ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
+    cp ./testrun/haproxy/haproxy.config "$metadata_dir/haproxy.config"
 fi
 
 for traffic_type in ${TRAFFIC_TYPES}; do
