@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"syscall"
@@ -41,14 +40,6 @@ func main() {
 	if v, ok := os.LookupEnv("DISCOVERY_URL"); ok && v != "" {
 		cli.Globals.DiscoveryURL = v
 	}
-
-	// This is to make paths emitted in the haproxy.config
-	// absolute which helps with certificates.
-	absPath, err := filepath.Abs(cli.Globals.OutputDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cli.Globals.OutputDir = absPath
 
 	if cli.Globals.Profile {
 		pprofFile, pprofErr := os.Create("cpu.pprof")

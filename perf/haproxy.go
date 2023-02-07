@@ -172,7 +172,7 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 		}
 	}
 
-	if err := createFile(path.Join(p.OutputDir, "haproxy", "haproxy.config"), haproxyConf.Bytes()); err != nil {
+	if err := createFile(path.Join(p.OutputDir, "haproxy", "haproxy.cfg"), haproxyConf.Bytes()); err != nil {
 		return err
 	}
 

@@ -28,7 +28,7 @@ fi
 if [[ $GATHER_METADATA_HAPROXY -eq 1 ]]; then
     ssh "$PROXY_HOST" rpm -qa haproxy26 > "$metadata_dir/rpm"
     ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
-    cp ./testrun/haproxy/haproxy.config "$metadata_dir/haproxy.config"
+    cp ./testrun/haproxy/haproxy.cfg "$metadata_dir/haproxy.cfg"
 fi
 
 if [[ $GATHER_METADATA_FIPS -eq 1 ]]; then
