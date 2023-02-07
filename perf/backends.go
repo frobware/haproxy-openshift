@@ -131,14 +131,7 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 		return httpServer.Shutdown(shutdownCtx)
 	})
 
-	var subjectAlternateNames = []string{
-		mustResolveHostname(),
-		mustResolveHostIP(),
-		c.ListenAddress,
-		"localhost",
-		"127.0.0.1",
-		"::1",
-	}
+	var subjectAlternateNames []string
 
 	for _, t := range AllTrafficTypes {
 		for i := 0; i < p.Nbackends; i++ {
