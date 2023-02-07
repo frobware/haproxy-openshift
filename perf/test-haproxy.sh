@@ -11,6 +11,7 @@ trap "echo interrupt; exit 1" INT TERM
 : "${SAMPLES:=8}"
 : "${GATHER_METADATA:=1}"
 : "${GATHER_METADATA_HAPROXY:=1}"
+: "${GATHER_METADATA_FIPS:=1}"
 
 date="$(date +%Y%m%d-%H%M%S)"
 top_level_results_dir="RESULTS/$date"
@@ -28,6 +29,10 @@ if [[ $GATHER_METADATA_HAPROXY -eq 1 ]]; then
     ssh "$PROXY_HOST" rpm -qa haproxy26 > "$metadata_dir/rpm"
     ssh "$PROXY_HOST" haproxy -vv > "$metadata_dir/haproxy"
     cp ./testrun/haproxy/haproxy.config "$metadata_dir/haproxy.config"
+fi
+
+if [[ $GATHER_METADATA_FIPS -eq 1 ]]; then
+    ssh "$PROXY_HOST" sudo fips-mode-setup --check > "$metadata_dir/fips-mode-setup"
 fi
 
 for traffic_type in ${TRAFFIC_TYPES}; do
