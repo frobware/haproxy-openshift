@@ -74,7 +74,7 @@ for my $dir (@ARGV) {
     my $result_date = basename($dir);
 
     $t = Text::ASCIITable->new({ headingText => "$result_date / $proxy_host" });
-    $t->setCols("traffic", "Hits (sum)", "Errors (sum)", "rps (AVG)");
+    $t->setCols("traffic", "Hits (sum)", "Errors (sum)", "requests/s (AVG)");
 
     my $nsamples = 0;
 
