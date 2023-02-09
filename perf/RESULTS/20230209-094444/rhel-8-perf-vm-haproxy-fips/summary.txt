@@ -1,5 +1,80 @@
 This is haproxy-2.6.6 running in a container on RHEL 8.
 
+$ oc adm release info registry.ci.openshift.org/ocp/release:4.13.0-0.nightly-2023-02-07-064924 --pullspecs | grep router
+  egress-router-cni quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:ed2292afd46b30c4372960331ddc1c53b84642532bfb1791d56a91f242b50809
+  haproxy-router    quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:3ed079be59e5686a18e2a86e3f0e093a63f2ba0493c62e651e742130200bf887
+
+$ podman pull --authfile ~/.secrets/pull-secret.json quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:3ed079be59e5686a18e2a86e3f0e093a63f2ba0493c62e651e742130200bf887
+
+$ podman save 25d9f91d4a98 -o ~/haproxy-image.tar
+
+$ scp ~/haproxy-image.tar rhel-8-perf-vm-haproxy-fips.int.frobware.com:
+
+# import haproxy-image.tar to RHEL 8
+
+[aim@rhel-8-perf-vm-haproxy-fips ~]$ podman load -i haproxy-image.tar
+Getting image source signatures
+Copying blob e3d9dd4bda3f skipped: already exists
+Copying blob c3f2dda53b7f skipped: already exists
+Copying blob d3fbfed1573d skipped: already exists
+Copying blob c91a7a6e73c7 skipped: already exists
+Copying blob 006860e86536 skipped: already exists
+Copying blob e2e51ecd22dc skipped: already exists
+Copying config 25d9f91d4a done
+Writing manifest to image destination
+Storing signatures
+Loaded image: sha256:25d9f91d4a98cba3b36546d22a03e4172381d34abbe6e90b3ee8e17f19ee2c58
+
+[aim@rhel-8-perf-vm-haproxy-fips ~] $ cd /home/aim/src/github.com/frobware/haproxy-openshift/perf/
+[aim@rhel-8-perf-vm-haproxy-fips ~] $ podman run --network=host --privileged=true -it --rm --entrypoint /bin/bash -v $PWD:$PWD 25d9f91d4a98
+
+[aim@rhel-8-perf-vm-haproxy-fips ~]$ uname -r
+4.18.0-425.10.1.el8_7.x86_64
+
+$ bash-4.4$ haproxy -v
+HAProxy version 2.6.6-274d1a4 2022/09/22 - https://haproxy.org/
+Status: long-term supported branch - will stop receiving fixes around Q2 2027.
+Known bugs: http://www.haproxy.org/bugs/bugs-2.6.6.html
+Running on: Linux 4.18.0-425.10.1.el8_7.x86_64 #1 SMP Wed Dec 14 16:00:01 EST 2022 x86_64
+
+$ bash-4.4$ haproxy -vv | grep OpenSSL
+Built with OpenSSL version : OpenSSL 1.1.1k  FIPS 25 Mar 2021
+Running on OpenSSL version : OpenSSL 1.1.1k  FIPS 25 Mar 2021
+OpenSSL library supports TLS extensions : yes
+OpenSSL library supports SNI : yes
+OpenSSL library supports : TLSv1.0 TLSv1.1 TLSv1.2 TLSv1.3
+
+$ bash-4.4$ rpm -qa | grep haproxy
+haproxy26-2.6.6-2.el8.x86_64
+
+$ bash-4.4$ rpm -qa | grep openssl
+openssl-libs-1.1.1k-7.el8_6.x86_64
+
+$ bash-4.4$ cd /home/aim/src/github.com/frobware/haproxy-openshift/perf/
+
+$ bash-4.4$ time haproxy -c -f ./testrun/haproxy
+Configuration file is valid
+
+real    0m0.075s
+user    0m0.067s
+sys     0m0.007s
+
+$ bash-4.4$ haproxy -V -f ./testrun/haproxy
+Note: setting global.maxconn to 262125.
+Available polling systems :
+      epoll : pref=300,  test result OK
+       poll : pref=200,  test result OK
+     select : pref=150,  test result FAILED
+Total: 3 (2 usable), will use epoll.
+
+Available filters :
+	[CACHE] cache
+	[COMP] compression
+	[FCGI] fcgi-app
+	[SPOE] spoe
+	[TRACE] trace
+Using epoll() as the polling mechanism.
+
 .-----------------------------------------------------------.
 | 20230209-094444 / 0 samples / rhel-8-perf-vm-haproxy-fips |
 +---------------+--------------+---------------+------------+
@@ -11,4 +86,3 @@ This is haproxy-2.6.6 running in a container on RHEL 8.
 | reencrypt     |     11787927 |         28588 |      39232 |
 | summary.txt   |            0 |             0 |          0 |
 '---------------+--------------+---------------+------------'
-
