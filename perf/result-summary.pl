@@ -85,7 +85,7 @@ for my $dir (@ARGV) {
 		   sum(@{$result->{connection_errors}}),
 		   average(@{$result->{rps}}));
 
-	$nsamples = scalar @{$result->{rps}};
+	$nsamples = scalar @{$result->{rps}} if $nsamples == 0;
     }
 
     $t->setOptions("headingText", "$result_date / $nsamples samples / $proxy_host");
