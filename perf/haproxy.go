@@ -22,6 +22,7 @@ type HAProxyGlobalConfig struct {
 	Maxconn              int
 	Nbthread             int
 	OutputDir            string
+	SocketDir            string
 	StatsPort            int
 	UseUnixDomainSockets bool
 }
@@ -156,6 +157,7 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 		Maxconn:              c.Maxconn,
 		Nbthread:             c.Nthreads,
 		OutputDir:            p.OutputDir,
+		SocketDir:            p.SocketDir,
 		StatsPort:            c.StatsPort,
 		UseUnixDomainSockets: c.UseUnixDomainSockets,
 	}

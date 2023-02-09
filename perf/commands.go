@@ -14,6 +14,7 @@ type Globals struct {
 	HostPrefix       string      `help:"Hostname prefix" default:"perf-test-hydra"`
 	Nbackends        int         `help:"Number of backends per traffic type" short:"n" default:"1"`
 	OutputDir        string      `help:"Configuration output directory" short:"o" default:"testrun"`
+	SocketDir        string      `help:"Directory for HAProxy's unix domain sockets" default:"/tmp"`
 	Port             int         `help:"Port number for backend metadata server" short:"p" default:"2000"`
 	Profile          bool        `help:"Record a CPU profile." short:"P"`
 	TLSReuse         bool        `help:"Enable TLS session reuse" default:"true"`

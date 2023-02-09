@@ -87,7 +87,7 @@ frontend public_ssl
 ##########################################################################
 backend be_sni
   {{ if .UseUnixDomainSockets }}
-  server fe_sni unix@{{.OutputDir}}/haproxy/haproxy-sni.sock weight 1 send-proxy
+  server fe_sni unix@{{.SocketDir}}/haproxy-sni.sock weight 1 send-proxy
   {{ else }}
   server fe_sni 127.0.0.1:10444 weight 1 send-proxy
   {{ end }}
@@ -101,7 +101,7 @@ frontend fe_sni
 
   # terminate ssl on edge
   {{ if .UseUnixDomainSockets }}
-  bind unix@{{.OutputDir}}/haproxy/haproxy-sni.sock ssl crt {{.Certificate}} crt-list {{.OutputDir}}/haproxy/cert_config.map accept-proxy
+  bind unix@{{.SocketDir}}/haproxy-sni.sock ssl crt {{.Certificate}} crt-list {{.OutputDir}}/haproxy/cert_config.map accept-proxy
   {{ else }}
   bind 127.0.0.1:10444 ssl crt {{.Certificate}} crt-list {{.OutputDir}}/haproxy/cert_config.map accept-proxy
   {{ end }}
@@ -138,7 +138,7 @@ frontend fe_sni
 # backend for when sni does not exist, or ssl term needs to happen on the edge
 backend be_no_sni
   {{ if .UseUnixDomainSockets }}
-  server fe_no_sni unix@{{.OutputDir}}/haproxy/haproxy-no-sni.sock weight 1 send-proxy
+  server fe_no_sni unix@{{.SocketDir}}/haproxy-no-sni.sock weight 1 send-proxy
   {{ else }}
   server fe_no_sni 127.0.0.1:10443 weight 1 send-proxy
   {{ end }}
@@ -147,7 +147,7 @@ frontend fe_no_sni
 
   # terminate ssl on edge
   {{ if .UseUnixDomainSockets }}
-  bind unix@{{.OutputDir}}/haproxy/haproxy-no-sni.sock ssl crt {{.Certificate}} accept-proxy
+  bind unix@{{.SocketDir}}/haproxy-no-sni.sock ssl crt {{.Certificate}} accept-proxy
   {{ else }}
   bind 127.0.0.1:10443 ssl crt {{.Certificate}} accept-proxy
   {{ end }}

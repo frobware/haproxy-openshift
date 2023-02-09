@@ -11,7 +11,7 @@ global
   # crt-base /etc/ssl
   # TODO: Check if we can get reload to be faster by saving server state.
   # server-state-file /tmp/haproxy.state
-  stats socket unix@{{.OutputDir}}/haproxy/haproxy.sock mode 600 level admin expose-fd listeners
+  stats socket unix@{{.SocketDir}}/haproxy.sock mode 600 level admin expose-fd listeners
   stats timeout 2m
 
   # Increase the default request size to be comparable to modern cloud load balancers (ALB: 64kb), affects
