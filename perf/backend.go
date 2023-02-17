@@ -112,6 +112,10 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		return fmt.Errorf("POST failed for %+v: %v", boundBackend, err)
 	}
 
+	if resp == nil {
+		return fmt.Errorf("POST failed for %+v: no response", boundBackend)
+	}
+
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		resp.Body.Close()
