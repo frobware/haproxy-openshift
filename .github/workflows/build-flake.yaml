@@ -9,4 +9,4 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Build
-        run: nix build .#todos
+        run: nix build .
