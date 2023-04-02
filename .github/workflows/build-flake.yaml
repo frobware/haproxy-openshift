@@ -1,5 +1,11 @@
 name: build flake and cache
 
+on:
+  push:
+    branches:
+      - main
+    path: flake.nix
+    
 jobs:
   build:
     runs-on: ubuntu-22.04
