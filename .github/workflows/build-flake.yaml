@@ -8,14 +8,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: git checkout
         uses: actions/checkout@v3
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
+      - name: cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: frobware-haproxy
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build
         run: |
+          # How to build all outputs in the flake?
           # Copied from https://www.reddit.com/r/NixOS/comments/vohopf/is_there_an_easy_way_to_build_all_the_packages_of/
-          # nix flake show --json | jq '.packages."x86_64-linux"|keys[]' | sort -V | xargs -I {} echo nix build .#{}
+          # nix flake show --json | jq '.packages."x86_64-linux"|keys[]' | sort -V | xargs -I {} nix build .#{}
           nix build .
