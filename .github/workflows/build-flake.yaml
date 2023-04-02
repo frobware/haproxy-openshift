@@ -5,7 +5,7 @@ on:
     branches:
       - main
     path: flake.nix
-    
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -16,4 +16,5 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
       - name: Build
         run: |
-          nix build .
+          # Copied from https://www.reddit.com/r/NixOS/comments/vohopf/is_there_an_easy_way_to_build_all_the_packages_of/
+          nix flake show --json | jq '.packages."x86_64-linux"|keys[]' | xargs -I {} echo nix build .#{}
