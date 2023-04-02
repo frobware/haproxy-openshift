@@ -11,3 +11,4 @@ tls.*
 /perf/cmd/gomb/gomb
 /perf/RESULTS/**/*.stderr
 *.stderr
+/result
