@@ -24,4 +24,4 @@ jobs:
           # How to build all outputs in the flake?
           # Copied from https://www.reddit.com/r/NixOS/comments/vohopf/is_there_an_easy_way_to_build_all_the_packages_of/
           # nix flake show --json | jq '.packages."x86_64-linux"|keys[]' | sort -V | xargs -I {} nix build .#{}
-          nix build .
+          nix build -v .
