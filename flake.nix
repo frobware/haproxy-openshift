@@ -180,24 +180,6 @@
     # Apply the overlay to nixpkgs.
     customPkgs = system: import nixpkgs {
       inherit system;
-      # We need to use an overlay because we want to add multiple
-      # versions of the same package to the package set. Normally,
-      # each package has a unique name within the package set, and
-      # there can only be one package with a given name. However, in
-      # our case, we want to add multiple versions of the same package
-      # (in this case, haproxy) with different version numbers. The
-      # overlay applies to the nixpkgs package set, adding the new
-      # package versions on top of the existing ones. This means that
-      # we can access the multiple versions of haproxy by specifying
-      # their version numbers in the package name. If we were to add
-      # the packages directly to the packages attribute, we would need
-      # to give each package a unique name, which would defeat the
-      # purpose of having multiple versions of the same package. we
-      # can still access the original haproxy package without
-      # specifying a version number. The original haproxy package is
-      # part of the nixpkgs package set, and it will be included in
-      # the customPkgs package set we create when applying the
-      # overlay.
       overlays = [ (multiHAProxyOverlay system) ];
       config = { };
     };
