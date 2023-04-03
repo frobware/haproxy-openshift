@@ -192,7 +192,7 @@
         value = (customPkgs system)."haproxy_${builtins.replaceStrings ["."] ["_"] ver.version}";
       }) versions);
     in {
-      # Default is most latest release in the latest LTS series.
+      # Default is latest release in the latest LTS series.
       default = haproxyPackages.haproxy_2_6_12;
     } // haproxyPackages);
   };
