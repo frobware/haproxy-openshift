@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -152,6 +153,11 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 
 	if _, err := writeCertificates(path.Join(p.OutputDir, "certs"), certBundle); err != nil {
 		return err
+	}
+
+	if len(backendsByTrafficType)*p.Nbackends >= 10000 {
+		// 10,000 is the default for the runtime.
+		debug.SetMaxThreads(len(backendsByTrafficType)*p.Nbackends + p.Nbackends)
 	}
 
 	for t, backends := range backendsByTrafficType {

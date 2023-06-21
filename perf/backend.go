@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"syscall"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -93,7 +94,7 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/register", p.Port)
 
-	for retries > 0 {
+	for {
 		request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonValue))
 		if err != nil {
 			return err
@@ -103,27 +104,25 @@ func (c *ServeBackendCmd) Run(p *ProgramCtx) error {
 		if resp, err = client.Do(request); err == nil {
 			break
 		}
+		if errors.Is(err, syscall.ECONNREFUSED) {
+			// Perhaps the parent crashed (e.g., cannot
+			// spawn OS thread due to lack of resources,
+			// or other). If we cannot connect there's no
+			// point retrying.
+			return fmt.Errorf("%s: %w", url, err)
+		}
 		retries -= 1
-		log.Printf("#%v retries remaining", retries)
+		if retries == 0 {
+			return fmt.Errorf("backend registration %+v failed: %v", boundBackend, err)
+		}
 		time.Sleep(250 * time.Millisecond)
 	}
 
-	if err != nil {
-		return fmt.Errorf("POST failed for %+v: %v", boundBackend, err)
-	}
-
-	if resp == nil {
-		return fmt.Errorf("POST failed for %+v: no response", boundBackend)
-	}
-
 	_, err = io.ReadAll(resp.Body)
+	defer resp.Body.Close()
 	if err != nil {
-		resp.Body.Close()
 		return err
 	}
-
-	resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("registration failed for %+v; Status=%v", boundBackend, resp.Status)
 	}
