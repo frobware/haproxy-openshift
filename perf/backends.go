@@ -121,7 +121,13 @@ func (c *ServeBackendsCmd) Run(p *ProgramCtx) error {
 	})
 
 	g.Go(func() error {
-		return httpServer.ListenAndServe()
+		err := httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			// Unexpected error.
+			return err
+		}
+		// http.ErrServerClosed represents a graceful shutdown.
+		return nil
 	})
 
 	g.Go(func() error {
