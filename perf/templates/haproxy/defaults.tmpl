@@ -174,10 +174,6 @@ frontend fe_no_sni
 
 listen stats
   bind :{{.StatsPort}}
-  {{ if .EnableLogging }}
-  log global
-  option httplog
-  {{ end }}
   mode http
   stats enable
   stats refresh 5s
