@@ -43,7 +43,7 @@ backend be_secure:{{.Name}}
   http-request add-header X-Forwarded-Proto-Version h2 if { ssl_fc_alpn -i h2 }
   http-request add-header Forwarded for=%[src];host=%[req.hdr(host)];proto=%[req.hdr(X-Forwarded-Proto)]
   cookie {{.BackendCookie}} insert indirect nocache httponly secure attr SameSite=None
-  server pod:{{.Name}}:{{.ListenAddress}}:{{.Port}} {{.ListenAddress}}:{{.Port}} cookie {{.ServerCookie}} weight 1 ssl verify required ca-file {{.TLSCACert}} check inter 5000
+  server pod:{{.Name}}:{{.ListenAddress}}:{{.Port}} {{.ListenAddress}}:{{.Port}} cookie {{.ServerCookie}} weight 1 ssl {{ if .EnableHTTP2 -}} alpn h2,http/1.1 verifyhost {{.Name}} {{ end -}} verify required ca-file {{.TLSCACert}} check inter 5000
   {{ else if eq .TrafficType "passthrough" }}
 backend be_tcp:{{.Name}}
   balance source

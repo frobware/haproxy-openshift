@@ -45,6 +45,7 @@ type TestCmd struct {
 }
 
 type GenProxyConfigCmd struct {
+	EnableHTTP2          bool   `default:"true"`
 	EnableLogging        bool   `default:"true"`
 	ListenAddress        string `default:""`
 	Maxconn              int    `default:"0"`

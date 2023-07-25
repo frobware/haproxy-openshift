@@ -14,6 +14,7 @@ import (
 type HAProxyGlobalConfig struct {
 	Backends             []HAProxyBackendConfig
 	Certificate          string
+	EnableHTTP2          bool
 	EnableLogging        bool
 	HTTPPort             int
 	HTTPSPort            int
@@ -29,6 +30,7 @@ type HAProxyGlobalConfig struct {
 
 type HAProxyBackendConfig struct {
 	BackendCookie string
+	EnableHTTP2   bool
 	ListenAddress string
 	Name          string
 	OutputDir     string
@@ -106,6 +108,7 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 		for _, b := range backends {
 			proxyBackends = append(proxyBackends, HAProxyBackendConfig{
 				BackendCookie: cookie(),
+				EnableHTTP2:   c.EnableHTTP2,
 				ListenAddress: b.ListenAddress,
 				Name:          b.Name,
 				OutputDir:     p.OutputDir,
@@ -149,6 +152,7 @@ func (c *GenProxyConfigCmd) generateMainConfig(p *ProgramCtx, backends []HAProxy
 	config := HAProxyGlobalConfig{
 		Backends:             backends,
 		Certificate:          certFile,
+		EnableHTTP2:          c.EnableHTTP2,
 		EnableLogging:        c.EnableLogging,
 		HTTPPort:             p.HTTPPort,
 		HTTPSPort:            p.HTTPSPort,
@@ -271,7 +275,13 @@ func (c *GenProxyConfigCmd) generateCertConfig(p *ProgramCtx, backends []HAProxy
 	var certConfigMap bytes.Buffer
 
 	for _, b := range filterBackendsByType([]TrafficType{EdgeTraffic, ReencryptTraffic}, backends) {
-		if _, err := io.WriteString(&certConfigMap, fmt.Sprintf("%s %s\n", certFile, b.Name)); err != nil {
+		var entry string
+		if b.EnableHTTP2 {
+			entry = fmt.Sprintf("%s [alpn h2,http1.1] %s\n", certFile, b.Name)
+		} else {
+			entry = fmt.Sprintf("%s %s\n", certFile, b.Name)
+		}
+		if _, err := io.WriteString(&certConfigMap, entry); err != nil {
 			return err
 		}
 	}
