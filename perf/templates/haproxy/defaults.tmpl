@@ -22,7 +22,9 @@ defaults
   # Long timeout for WebSocket connections.
   timeout tunnel 1h
 
-
+  {{ if .EnableLogging }}
+  option log-health-checks
+  {{ end }}
 
 frontend public
 
