@@ -12,32 +12,34 @@ import (
 )
 
 type HAProxyGlobalConfig struct {
-	Backends             []HAProxyBackendConfig
-	Certificate          string
-	EnableHTTP2          bool
-	EnableLogging        bool
-	HTTPPort             int
-	HTTPSPort            int
-	HTTPSPortSNIOnly     int
-	ListenAddress        string
-	Maxconn              int
-	Nbthread             int
-	OutputDir            string
-	SocketDir            string
-	StatsPort            int
-	UseUnixDomainSockets bool
+	Backends                    []HAProxyBackendConfig
+	Certificate                 string
+	EnableHTTP2                 bool
+	EnableLogging               bool
+	HTTPPort                    int
+	HTTPSPort                   int
+	HTTPSPortSNIOnly            int
+	HealthCheckIntervalInMillis int
+	ListenAddress               string
+	Maxconn                     int
+	Nbthread                    int
+	OutputDir                   string
+	SocketDir                   string
+	StatsPort                   int
+	UseUnixDomainSockets        bool
 }
 
 type HAProxyBackendConfig struct {
-	BackendCookie string
-	EnableHTTP2   bool
-	ListenAddress string
-	Name          string
-	OutputDir     string
-	Port          string
-	ServerCookie  string
-	TLSCACert     string
-	TrafficType   TrafficType
+	BackendCookie               string
+	EnableHTTP2                 bool
+	HealthCheckIntervalInMillis int
+	ListenAddress               string
+	Name                        string
+	OutputDir                   string
+	Port                        string
+	ServerCookie                string
+	TLSCACert                   string
+	TrafficType                 TrafficType
 }
 
 const (
@@ -107,15 +109,16 @@ func (c *GenProxyConfigCmd) Run(p *ProgramCtx) error {
 	for t, backends := range backendsByTrafficType {
 		for _, b := range backends {
 			proxyBackends = append(proxyBackends, HAProxyBackendConfig{
-				BackendCookie: cookie(),
-				EnableHTTP2:   c.EnableHTTP2,
-				ListenAddress: b.ListenAddress,
-				Name:          b.Name,
-				OutputDir:     p.OutputDir,
-				Port:          fmt.Sprintf("%v", b.Port),
-				ServerCookie:  cookie(),
-				TLSCACert:     certPaths.RootCAFile,
-				TrafficType:   t,
+				BackendCookie:               cookie(),
+				EnableHTTP2:                 c.EnableHTTP2,
+				HealthCheckIntervalInMillis: c.HealthCheckIntervalInMillis,
+				ListenAddress:               b.ListenAddress,
+				Name:                        b.Name,
+				OutputDir:                   p.OutputDir,
+				Port:                        fmt.Sprintf("%v", b.Port),
+				ServerCookie:                cookie(),
+				TLSCACert:                   certPaths.RootCAFile,
+				TrafficType:                 t,
 			})
 		}
 	}

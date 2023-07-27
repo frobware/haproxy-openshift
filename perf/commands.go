@@ -45,13 +45,14 @@ type TestCmd struct {
 }
 
 type GenProxyConfigCmd struct {
-	EnableHTTP2          bool   `default:"true"`
-	EnableLogging        bool   `default:"true"`
-	ListenAddress        string `default:""`
-	Maxconn              int    `default:"0"`
-	Nthreads             int    `default:"4"`
-	StatsPort            int    `default:"1936"`
-	UseUnixDomainSockets bool   `default:"true"`
+	EnableHTTP2                 bool   `default:"true"`
+	EnableLogging               bool   `default:"true"`
+	HealthCheckIntervalInMillis int    `default:"1000"`
+	ListenAddress               string `default:""`
+	Maxconn                     int    `default:"0"`
+	Nthreads                    int    `default:"4"`
+	StatsPort                   int    `default:"1936"`
+	UseUnixDomainSockets        bool   `default:"true"`
 }
 
 type SyncEnvoyConfigCmd struct {
