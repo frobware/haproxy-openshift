@@ -10,7 +10,7 @@
   - name: Create /etc/auto.u
     copy:
       content: |
-        aim -rw,soft,intr 192.168.7.64:/export/home/aim
+        * -rw,soft,intr 192.168.7.64:/export/home/&
       dest: /etc/auto.u
       force: yes
       group: root
