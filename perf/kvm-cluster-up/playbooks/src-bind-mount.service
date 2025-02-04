@@ -1,0 +1,17 @@
+[Unit]
+Description=Bind /u/aim/src to /home/aim/src
+Requires=autofs.service
+After=autofs.service
+
+[Mount]
+What=/u/aim/src
+Where=/home/aim/src
+Type=none
+Options=bind
+
+[Install]
+WantedBy=multi-user.target
+
+# sudo systemctl daemon-reload
+# sudo systemctl enable home-aim-src.mount
+# sudo systemctl start home-aim-src.mount
